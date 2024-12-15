@@ -5,6 +5,7 @@ import pandas as pd
 import io
 import execute
 import csv_to_sql as c2q
+from typing import Any
 
 def set_api(app: FastAPI) -> None:
     @app.post('/execute')
@@ -37,7 +38,7 @@ def set_api(app: FastAPI) -> None:
                 for query in queries:
                     query_num += 1
                     if query.strip():
-                        query_result = await database.fetch_all(query)
+                        query_result: Any = await database.fetch_all(query)
 
                         num_of_rows = len(query_result) if query_result else 0
                         if query_result:
