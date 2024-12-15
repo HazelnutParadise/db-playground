@@ -117,7 +117,7 @@ async def execute_sql(request: Request):
     except Exception as e:
         return "error:" + str(e)
     finally:
-        drop_database(db_type, version, db_name)
+        await drop_database(db_type, version, db_name)
         await database.disconnect()
 
         # if db_type == "postgres":
