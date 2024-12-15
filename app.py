@@ -1,9 +1,14 @@
 from fastapi import FastAPI
-from api import api
+from api import set_api
 
 app = FastAPI()
-api(app)
+set_api(app)
 
+@app.get('/')
+def index():
+    with open('./frontend/index.html', 'r') as f:
+        html_content = f.read()
+    return html_content
 
 if __name__ == '__main__':
     import uvicorn

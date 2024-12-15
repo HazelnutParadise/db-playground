@@ -2,7 +2,7 @@ from fastapi import FastAPI, HTTPException, Request
 import databases
 import execute
 
-def api(app: FastAPI):
+def set_api(app: FastAPI):
     @app.post('/execute')
     async def execute_sql(request: Request):
         data = await request.json()
