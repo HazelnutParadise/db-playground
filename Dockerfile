@@ -20,13 +20,10 @@ RUN apt-get update && apt-get install -y \
 WORKDIR /app
 
 # 拷貝依賴文件
-ADD requirements.txt ./
+COPY . .
 
 # 安裝 Python 依賴
 RUN pip install --no-cache-dir -r requirements.txt
-
-# 拷貝應用代碼
-ADD app.py ./
 
 # 暴露 5000 端口
 EXPOSE 5000

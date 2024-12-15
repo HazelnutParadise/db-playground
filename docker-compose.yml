@@ -1,0 +1,168 @@
+version: '3.8'
+services:
+  app:
+    image: db-playground-app:latest
+    ports:
+      - "4998:5000"
+    networks:
+      - dbplayground-backend
+    restart: unless-stopped
+
+# MySQL
+  mysql90:
+    image: mysql:9.0
+    environment:
+      MYSQL_ROOT_PASSWORD: secret
+    command: --skip-log-bin --innodb_flush_log_at_trx_commit=0 --innodb_log_file_size=1M --innodb_use_native_aio=0
+    networks:
+      - dbplayground-backend
+    restart: unless-stopped
+
+  mysql84:
+    image: mysql:8.4
+    environment:
+      MYSQL_ROOT_PASSWORD: secret
+    command: --skip-log-bin --innodb_flush_log_at_trx_commit=0 --innodb_log_file_size=1M --innodb_use_native_aio=0
+    networks:
+      - dbplayground-backend
+    restart: unless-stopped
+
+  mysql80:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: secret
+    command: --skip-log-bin --innodb_flush_log_at_trx_commit=0 --innodb_log_file_size=1M --innodb_use_native_aio=0
+    networks:
+      - dbplayground-backend
+    restart: unless-stopped
+
+  mysql57:
+    image: mysql:5.7
+    environment:
+      MYSQL_ROOT_PASSWORD: secret
+    command: --skip-log-bin --innodb_flush_log_at_trx_commit=0 --innodb_log_file_size=1M --innodb_use_native_aio=0
+    networks:
+      - dbplayground-backend
+    restart: unless-stopped
+
+  mysql56:
+    image: mysql:5.6
+    environment:
+      MYSQL_ROOT_PASSWORD: secret
+    command: --skip-log-bin --innodb_flush_log_at_trx_commit=0 --innodb_log_file_size=1M --innodb_use_native_aio=0
+    networks:
+      - dbplayground-backend
+    restart: unless-stopped
+
+  mysql55:
+    image: mysql:5.5
+    environment:
+      MYSQL_ROOT_PASSWORD: secret
+    command: --skip-log-bin --innodb_flush_log_at_trx_commit=0 --innodb_log_file_size=1M --innodb_use_native_aio=0
+    networks:
+      - dbplayground-backend
+    restart: unless-stopped
+
+# PostgreSQL
+  postgres16:
+    image: postgres:16
+    environment:
+      POSTGRES_PASSWORD: secret
+      POSTGRES_INITDB_ARGS: "--nosync"
+    command: postgres -c max_wal_senders=0 -c wal_level=minimal -c archive_mode=off -c fsync=off -c synchronous_commit=off -c logging_collector=off -c log_statement=none
+    networks:
+      - dbplayground-backend
+    restart: unless-stopped
+
+  postgres15:
+    image: postgres:15
+    environment:
+      POSTGRES_PASSWORD: secret
+      POSTGRES_INITDB_ARGS: "--nosync"
+    command: postgres -c max_wal_senders=0 -c wal_level=minimal -c archive_mode=off -c fsync=off -c synchronous_commit=off -c logging_collector=off -c log_statement=none
+    networks:
+      - dbplayground-backend
+    restart: unless-stopped
+
+  postgres14:
+    image: postgres:14
+    environment:
+      POSTGRES_PASSWORD: secret
+      POSTGRES_INITDB_ARGS: "--nosync"
+    command: postgres -c max_wal_senders=0 -c wal_level=minimal -c archive_mode=off -c fsync=off -c synchronous_commit=off -c logging_collector=off -c log_statement=none
+    networks:
+      - dbplayground-backend
+    restart: unless-stopped
+
+  postgres13:
+    image: postgres:13
+    environment:
+      POSTGRES_PASSWORD: secret
+      POSTGRES_INITDB_ARGS: "--nosync"
+    command: postgres -c max_wal_senders=0 -c wal_level=minimal -c archive_mode=off -c fsync=off -c synchronous_commit=off -c logging_collector=off -c log_statement=none
+    networks:
+      - dbplayground-backend
+    restart: unless-stopped
+
+  postgres12:
+    image: postgres:12
+    environment:
+      POSTGRES_PASSWORD: secret
+      POSTGRES_INITDB_ARGS: "--nosync"
+    command: postgres -c max_wal_senders=0 -c wal_level=minimal -c archive_mode=off -c fsync=off -c synchronous_commit=off -c logging_collector=off -c log_statement=none
+    networks:
+      - dbplayground-backend
+    restart: unless-stopped
+
+  postgres11:
+    image: postgres:11
+    environment:
+      POSTGRES_PASSWORD: secret
+      POSTGRES_INITDB_ARGS: "--nosync"
+    command: postgres -c max_wal_senders=0 -c wal_level=minimal -c archive_mode=off -c fsync=off -c synchronous_commit=off -c logging_collector=off -c log_statement=none
+    networks:
+      - dbplayground-backend
+    restart: unless-stopped
+
+  postgres10:
+    image: postgres:10
+    environment:
+      POSTGRES_PASSWORD: secret
+      POSTGRES_INITDB_ARGS: "--nosync"
+    command: postgres -c max_wal_senders=0 -c wal_level=minimal -c archive_mode=off -c fsync=off -c synchronous_commit=off -c logging_collector=off -c log_statement=none
+    networks:
+      - dbplayground-backend
+    restart: unless-stopped
+
+  postgres96:
+    image: postgres:9.6
+    environment:
+      POSTGRES_PASSWORD: secret
+      POSTGRES_INITDB_ARGS: "--nosync"
+    command: postgres -c max_wal_senders=0 -c wal_level=minimal -c archive_mode=off -c fsync=off -c synchronous_commit=off -c logging_collector=off -c log_statement=none
+    networks:
+      - dbplayground-backend
+    restart: unless-stopped
+
+  postgres95:
+    image: postgres:9.5
+    environment:
+      POSTGRES_PASSWORD: secret
+      POSTGRES_INITDB_ARGS: "--nosync"
+    command: postgres -c max_wal_senders=0 -c wal_level=minimal -c archive_mode=off -c fsync=off -c synchronous_commit=off -c logging_collector=off -c log_statement=none
+    networks:
+      - dbplayground-backend
+    restart: unless-stopped
+
+  postgres94:
+    image: postgres:9.4
+    environment:
+      POSTGRES_PASSWORD: secret
+      POSTGRES_INITDB_ARGS: "--nosync"
+    command: postgres -c max_wal_senders=0 -c wal_level=minimal -c archive_mode=off -c fsync=off -c synchronous_commit=off -c logging_collector=off -c log_statement=none
+    networks:
+      - dbplayground-backend
+    restart: unless-stopped
+
+networks:
+  dbplayground-backend:
