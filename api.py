@@ -1,6 +1,10 @@
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request, File, UploadFile, Form
+from fastapi.responses import JSONResponse
 import databases
+import pandas as pd
+import io
 import execute
+import csv_to_sql as c2q
 
 def set_api(app: FastAPI):
     @app.post('/execute')
@@ -68,3 +72,19 @@ def set_api(app: FastAPI):
         finally:
             await execute.drop_database(db_type, version, db_name)
             await database.disconnect()
+
+    @app.post("/csv-to-sql")
+    async def csv_to_sql(file: UploadFile = File(...), table_name: str = Form(...)):
+        if file.content_type == 'text/csv':
+            try:
+                contents = await file.read()
+                df = pd.read_csv(io.StringIO(contents.decode('utf-8')), skip_blank_lines=True)
+                header_row = c2q.find_header_row(df)
+                df = pd.read_csv(io.StringIO(contents.decode('utf-8')), header=header_row)
+                df = c2q.remove_empty_or_nan_rows_or_columns(df)
+                sql = c2q.create_sql_from_df(df, table_name)
+                return JSONResponse(content={"sql": sql})
+            except Exception as e:
+                return JSONResponse(status_code=400, content={"error": str(e)})
+        else:
+            return JSONResponse(status_code=400, content={"error": "Invalid file type"})

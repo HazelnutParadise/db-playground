@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
       name="description"
-      content="SQL語法練習神器，無長度限制且具備人性化貼心設計。支援 MySQL、PostgreSQL、Microsoft SQL Server 等多種資料庫。"
+      content="SQL語法練習神器，無長度限制且具備人性化貼心設計。支援 MySQL、PostgreSQL 等多種資料庫。"
     />
     <title>DB Playground - 榛果繽紛樂</title>
     <link rel="icon" href="dbPlayground.ico" type="image/x-icon" />
@@ -1628,7 +1628,7 @@
       runButton.classList.add("running-btn");
 
       // 發送請求到後端
-      fetch("https://server2.hazelnut-paradise.com/db-playground/execute", {
+      fetch("/execute", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -1834,7 +1834,7 @@
       formData.append("table_name", tableName);
 
       const response = await fetch(
-        "https://server2.hazelnut-paradise.com/db-playground/toSQL",
+        "/csv-to-sql",
         {
           method: "POST",
           body: formData,
