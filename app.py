@@ -6,7 +6,7 @@ from api import set_api
 app = FastAPI()
 set_api(app)
 
-@app.mount("/static", StaticFiles(directory="./frontend/static"), name="static")
+app.mount("/static", StaticFiles(directory="./frontend/static"), name="static")
 
 @app.get('/')
 def index():
