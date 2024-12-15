@@ -1,11 +1,11 @@
 import pandas as pd
 
-def remove_empty_or_nan_rows_or_columns(df):
+def remove_empty_or_nan_rows_or_columns(df: pd.DataFrame) -> pd.DataFrame:
     """ Remove rows where all cells are NaN or empty. """
     new_df = df.dropna(axis=1, how='all')
     return new_df.dropna(how='all')
 
-def infer_type(value):
+def infer_type(value) -> str:
     """尝试识别数据值的类型以匹配 SQL 类型。"""
     try:
         int_value = int(value)
@@ -17,7 +17,7 @@ def infer_type(value):
         except ValueError:
             return 'str'
 
-def find_header_row(df):
+def find_header_row(df: pd.DataFrame) -> int:
     num_rows = df.shape[0]
     header_score = [0] * num_rows
 
@@ -48,7 +48,7 @@ def find_header_row(df):
         return header_score.index(max_score)
     return 0  # 如果没有找到明确的表头，返回 0
 
-def create_sql_from_df(df, table_name):
+def create_sql_from_df(df: pd.DataFrame, table_name: str) -> str:
     """ Create SQL CREATE and INSERT statements from DataFrame """
     create_table_statement = f'CREATE TABLE `{table_name}` ('
     column_definitions = []
@@ -70,7 +70,7 @@ def create_sql_from_df(df, table_name):
 
     return create_table_statement + '\n' + '\n'.join(insert_statements)
 
-def escape_value(value):
+def escape_value(value) -> str:
     """ Properly escape string values for SQL. """
     if pd.isna(value):
         return 'NULL'
@@ -80,7 +80,7 @@ def escape_value(value):
     else:
         return str(value)
 
-def infer_sql_type(series):
+def infer_sql_type(series: pd.Series) -> str:
     # Check for integer type with range constraints for INT and BIGINT
     if pd.api.types.is_integer_dtype(series):
         if series.max() > 2147483647 or series.min() < -2147483648:
@@ -109,7 +109,7 @@ def infer_sql_type(series):
     else:
         return 'TEXT'
 
-def calculate_float_precision_scale(series):
+def calculate_float_precision_scale(series: pd.Series) -> tuple:
     """ Calculate the maximum precision and scale for DECIMAL SQL data type. """
     precision = scale = 0
     for value in series.dropna():

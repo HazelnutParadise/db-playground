@@ -1,4 +1,4 @@
-FROM python:3.12-slim
+FROM python:3.13-slim
 
 # 安裝必要的系統依賴和 MSSQL 驅動程序
 RUN apt-get update && apt-get install -y \

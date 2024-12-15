@@ -9,7 +9,7 @@ set_api(app)
 app.mount("/static", StaticFiles(directory="./frontend/static"), name="static")
 
 @app.get('/')
-def index():
+def index() -> HTMLResponse:
     with open('./frontend/index.html', 'r') as f:
         html_content = f.read()
     return HTMLResponse(html_content)

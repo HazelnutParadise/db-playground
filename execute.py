@@ -31,11 +31,11 @@ async def build_database_url(db_type: str, version: str, db_name: str) -> str:
         raise ValueError("Unsupported database type")
     
 # 解析多個 SQL 查詢的函數
-async def parse_queries(full_query: str) -> list:
+async def parse_queries(full_query: str) -> list[str]:
     parsed = sqlparse.split(full_query)
     return [query.strip() for query in parsed if query.strip()]
 
-async def drop_database(db_type: str, version: str, db_name: str):
+async def drop_database(db_type: str, version: str, db_name: str) -> None:
     admin_db_url = await build_database_url(db_type, version, "master" if db_type == "mssql" else "mysql" if db_type == "mysql" else "postgres")
 
     if db_type == "postgres":

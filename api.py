@@ -6,9 +6,9 @@ import io
 import execute
 import csv_to_sql as c2q
 
-def set_api(app: FastAPI):
+def set_api(app: FastAPI) -> None:
     @app.post('/execute')
-    async def execute_sql(request: Request):
+    async def execute_sql(request: Request) -> str:
         data = await request.json()
         db_type = data.get('dbType')
         version = data.get('version')
@@ -74,7 +74,7 @@ def set_api(app: FastAPI):
             await database.disconnect()
 
     @app.post("/csv-to-sql")
-    async def csv_to_sql(file: UploadFile = File(...), table_name: str = Form(...)):
+    async def csv_to_sql(file: UploadFile = File(...), table_name: str = Form(...)) -> JSONResponse:
         if file.content_type == 'text/csv':
             try:
                 contents = await file.read()
