@@ -3,7 +3,6 @@ import databases
 import sqlparse
 import uuid
 import asyncpg
-import pyodbc
 
 app = FastAPI()
 
@@ -14,8 +13,6 @@ async def build_database_url(db_type: str, version: str, db_name: str) -> str:
         return f"mysql+aiomysql://root:secret@mysql{version_key}/{db_name}"
     elif db_type == "postgres":
         return f"postgresql://postgres:secret@postgres{version_key}/{db_name}"
-    # elif db_type == "mssql":
-    #     return f"DRIVER={{ODBC Driver 17 for SQL Server}};SERVER=mssql{version_key};UID=sa;PWD=YourStrong!Passw0rd;DATABASE={db_name}"
     else:
         raise ValueError("Unsupported database type")
 
@@ -41,18 +38,29 @@ async def parse_queries(full_query: str) -> list:
     parsed = sqlparse.split(full_query)
     return [query.strip() for query in parsed if query.strip()]
 
-async def drop_database(db_type: str, version: str, db_name: str):
-    admin_db_url = await build_database_url(db_type, version, "master" if db_type == "mssql" else "mysql" if db_type == "mysql" else "postgres")
-
+async def drop_database(db_type, version, db_name):
     if db_type == "postgres":
-        conn = await asyncpg.connect(admin_db_url)
-        await conn.execute(f'DROP DATABASE "{db_name}"')
-        await conn.close()
-    else:
-        admin_db = databases.Database(admin_db_url)
-        await admin_db.connect()
-        await admin_db.execute(f"DROP DATABASE {db_name}")
-        await admin_db.disconnect()
+        try:
+            # 連接到 postgres 管理資料庫
+            admin_db_url = await build_database_url(db_type, version, "postgres")
+            conn = await asyncpg.connect(admin_db_url)
+            
+            # 先終止所有連到目標資料庫的連線
+            await conn.execute(f'''
+                SELECT pg_terminate_backend(pg_stat_activity.pid)
+                FROM pg_stat_activity
+                WHERE pg_stat_activity.datname = $1
+                AND pid <> pg_backend_pid()
+            ''', db_name)
+            
+            # 再刪除資料庫
+            await conn.execute(f'DROP DATABASE IF EXISTS "{db_name}"')
+            
+        except Exception as e:
+            print(f"Error dropping database: {str(e)}")
+            
+        finally:
+            await conn.close()
 
 @app.post('/execute')
 async def execute_sql(request: Request):
@@ -119,24 +127,6 @@ async def execute_sql(request: Request):
     finally:
         await drop_database(db_type, version, db_name)
         await database.disconnect()
-
-        # if db_type == "postgres":
-        #     admin_db_url = await build_database_url(db_type, version, "postgres")
-        #     conn = await asyncpg.connect(admin_db_url)
-        #     await conn.execute(f'DROP DATABASE "{db_name}"')
-        #     await conn.close()
-        # elif db_type == "mssql":
-        #     admin_db_url = await build_database_url(db_type, version, "master")
-        #     conn = pyodbc.connect(admin_db_url, autocommit=True)
-        #     cursor = conn.cursor()
-        #     cursor.execute(f'DROP DATABASE [{db_name}]')
-        #     conn.commit()
-        #     conn.close()
-        # else:
-        #     admin_db = databases.Database(await build_database_url(db_type, version, "mysql"))
-        #     await admin_db.connect()
-        #     await admin_db.execute(f"DROP DATABASE {db_name}")
-        #     await admin_db.disconnect()
 
 if __name__ == '__main__':
     import uvicorn
