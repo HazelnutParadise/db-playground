@@ -68,7 +68,7 @@ async def execute_sql(request: Request):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
     finally:
-        drop_database(db_type, version, db_name)
+        await drop_database(db_type, version, db_name)
 
     if db_type == "mssql":
         conn = pyodbc.connect(database_url, autocommit=True)
