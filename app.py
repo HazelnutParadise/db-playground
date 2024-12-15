@@ -5,6 +5,12 @@ from api import set_api
 app = FastAPI()
 set_api(app)
 
+@app.get('/ico')
+def ico():
+    with open('./frontend/favicon.ico', 'rb') as f:
+        ico_content = f.read()
+    return ico_content
+
 @app.get('/')
 def index():
     with open('./frontend/index.html', 'r') as f:
