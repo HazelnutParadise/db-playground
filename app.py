@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.responses import HTMLResponse
 from api import set_api
 
 app = FastAPI()
@@ -8,7 +9,7 @@ set_api(app)
 def index():
     with open('./frontend/index.html', 'r') as f:
         html_content = f.read()
-    return html_content
+    return HTMLResponse(html_content)
 
 if __name__ == '__main__':
     import uvicorn
