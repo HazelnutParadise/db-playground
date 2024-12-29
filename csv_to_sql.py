@@ -6,7 +6,7 @@ def remove_empty_or_nan_rows_or_columns(df: pd.DataFrame) -> pd.DataFrame:
     return new_df.dropna(how='all')
 
 def infer_type(value) -> str:
-    """尝试识别数据值的类型以匹配 SQL 类型。"""
+    """ Infer the data type of a value as 'int', 'float', or 'str'. """
     try:
         int_value = int(value)
         return 'int'
