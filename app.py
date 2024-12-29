@@ -6,8 +6,6 @@ from api import set_api
 app = FastAPI()
 set_api(app)
 
-app.mount("/static", StaticFiles(directory="./frontend/static"), name="static")
-
 @app.get('/')
 def index() -> HTMLResponse:
     with open('./frontend/index.html', 'r') as f:
