@@ -1002,6 +1002,14 @@
 
     <div id="snackbar">This is a snackbar message!</div>
 
+    <!-- callLLMForHelp -->
+    <div id="callLLMForHelpModal"
+      style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background-color: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); z-index: 1000;">
+      <p>新功能開發中，敬請期待</p>
+      <button onclick="closeCallLLMForHelpModal()"
+        style="margin-top: 10px; padding: 5px 10px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">Close</button>
+    </div>
+
     <!-- 廣告 -->
     <div id="div-onead-draft"></div>
     <script type="text/javascript">
@@ -1455,16 +1463,7 @@
   }
 
   function callLLMForHelp() {
-    // 建立一個 div 元素
-    const callLLMForHelpModal = document.createElement("div");
-    callLLMForHelpModal.innerHTML = `
-        <div id="callLLMForHelpModal" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background-color: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); z-index: 1000;">
-          <p>新功能開發中，敬請期待</p>
-          <button onclick="closeCallLLMForHelpModal()" style="margin-top: 10px; padding: 5px 10px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">Close</button>
-        </div>
-      `;
-    // 將建立的元素附加到 body
-    document.body.appendChild(callLLMForHelpModal.firstElementChild);
+    showCallLLMForHelpModal();
   }
 
   let originalResult = "";
