@@ -1188,7 +1188,7 @@
         lineNumbersMinChars: 3,
         scrollBeyondLastLine: false,
         readOnly: false,
-        quickSuggestions: true, // 确保启用快速建议
+        quickSuggestions: true,
         suggestOnTriggerCharacters: true,
         automaticLayout: true, // Enable automatic layout
         wordWrap: "on", // 啟用自動換行
@@ -1211,7 +1211,6 @@
     }
 
     setFontSize();
-    // 监听字体大小滑动条的变化
     addEventListener("input", setFontSize);
 
     // 依據電腦主題切換主題
@@ -1427,10 +1426,10 @@
 
 <script>
   function removeSqlComments(sql) {
-    // 移除单行注释
+    // 移除單行註解
     sql = sql.replace(/--.*$/gm, "");
 
-    // 移除多行注释
+    // 移除多行註解
     sql = sql.replace(/\/\*[\s\S]*?\*\//gm, "");
 
     return sql.trim();
@@ -1447,9 +1446,23 @@
     return s;
   }
 
+  function showCallLLMForHelpModal() {
+    document.getElementById('callLLMForHelpModal').style.display = 'block';
+  }
+
+  function closeCallLLMForHelpModal() {
+    document.getElementById('callLLMForHelpModal').style.display = 'none';
+  }
+
   function callLLMForHelp() {
     // todo: 這裡要呼叫 LLM 的 API
-    alert("新功能開發中，敬請期待")
+    const callLLMForHelpModal = document.createElement("div").innerHTML = `
+      <div id="callLLMForHelpModal" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background-color: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); z-index: 1000;">
+        <p>新功能開發中，敬請期待</p>
+        <button onclick="closeCallLLMForHelpModal()" style="margin-top: 10px; padding: 5px 10px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">Close</button>
+      </div>
+    `
+    document.body.appendChild(callLLMForHelpModal)
   }
 
   let originalResult = "";
@@ -1507,7 +1520,8 @@
         const status = resJson.status
         let data = resJson.result
         status === "error" && (
-          data = '<h5 style="background-color: red; padding: 2px 10px;">ERROR</h5>' + data
+          data = '<h5 class="bg-danger" style="padding: 2px 10px;color: white;">ERROR</h5>' + data
+          + '<br>'
           + '<br>'
           + '<button class="small-button" id="callLLMForHelpBtn" onclick="callLLMForHelp()">向 AI 求助</button>'
           + '<br>'
