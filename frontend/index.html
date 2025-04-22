@@ -1497,7 +1497,10 @@
       }), // 這裡根據需要調整資料庫類型和版本
     })
       .then((response) => response.json())
-      .then((data) => {
+      .then((resJson) => {
+        // todo: 如果失敗就出現call LLM選項
+        const status = resJson.status
+        const data = resJson.result
         // 處理響應數據
         let cleanText = removeFirstLastQuotes(data);
         originalResult = cleanText;

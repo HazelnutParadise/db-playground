@@ -65,11 +65,20 @@ def set_api(app: FastAPI) -> None:
                         response += html_content + "<br>"
 
             if not response:
-                return "No query executed."
+                return JSONResponse(content={
+                    "status": "success",
+                    "result":"No query executed."
+                }) 
 
-            return response
+            return JSONResponse(content={
+                "status": "success",
+                "result": response
+            }) 
         except Exception as e:
-            return "error:" + str(e)
+            return JSONResponse(content={
+                "status": "error",
+                "result": str(e)
+            })
         finally:
             await execute.drop_database(db_type, version, db_name)
             await database.disconnect()
