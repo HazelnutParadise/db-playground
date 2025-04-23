@@ -7,6 +7,8 @@ import execute
 import csv_to_sql as c2q
 from typing import Any
 
+from ask_ai_for_help import ask_ai_for_help as ask_ai_for_help_func
+
 def set_api(app: FastAPI) -> None:
     @app.post('/execute')
     async def execute_sql(request: Request) -> str:
@@ -98,3 +100,21 @@ def set_api(app: FastAPI) -> None:
                 return JSONResponse(status_code=400, content={"error": str(e)})
         else:
             return JSONResponse(status_code=400, content={"error": "Invalid file type"})
+        
+    @app.post("/call-llm-for-help")
+    async def call_llm_for_help(request: Request) -> JSONResponse:
+        data = await request.json()
+        result = ask_ai_for_help_func(data={
+            'db_type': data.get('dbType'),
+            'db_version': data.get('dbVersion'),
+            'schema_sqls': data.get('schemaSql'),
+            'queries': data.get('querySql'),
+            'error_message': data.get('errorMessage')
+        })
+        return JSONResponse(content={
+            "status": "success",
+            "result": result
+        }) if result else JSONResponse(content={
+            "status": "error",
+            "result": "No response from AI."
+        })

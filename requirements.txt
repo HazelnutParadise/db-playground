@@ -10,3 +10,4 @@ sqlparse
 pyodbc
 pandas
 python-multipart
+langchain-ollama
