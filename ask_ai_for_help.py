@@ -33,6 +33,7 @@ def ask_ai_for_help(data: dict) -> str | None:
             <pre><code>這裡是修正後的 SQL 查詢片段...</code></pre>
         </div>
         ```
+    5. <pre><code> 中，首行不空行。
     """
     response = ask_llm(prompt)
     response = response.replace("```html", "").replace("```", "").strip()
