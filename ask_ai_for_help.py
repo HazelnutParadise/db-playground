@@ -1,7 +1,6 @@
 from llm import ask_llm
 
 def ask_ai_for_help(data: dict) -> str | None:
-    # todo
     prompt = f"""
     你是一個 SQL 專家，以下 SQL 查詢有語法錯誤，請解釋為何錯誤，並提供修正建議：
     - db_type: {data['db_type']}

@@ -1,7 +1,7 @@
 from langchain_ollama import ChatOllama
 
 model = "gemma3:12b"
-llm = ChatOllama(model=model, base_url="http://192.168.1.164:11434")
+llm = ChatOllama(model=model, base_url="http://ollama:11434")
 
 def ask_llm(prompt: str) -> (str | None):
     """
