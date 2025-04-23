@@ -1658,6 +1658,11 @@
       "g"
     );
     cleanHTML = cleanHTML.replace(btnRegex, "");
+    let loderRegex = new RegExp(
+      '<div[^>]*id="callLLMForHelpLoader"[^>]*>.*?</div>',
+      "g"
+    );
+    cleanHTML = cleanHTML.replace(loderRegex, "");
     return cleanHTML;
   }
 </script>
