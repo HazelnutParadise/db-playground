@@ -1468,7 +1468,7 @@
         let cleanText = removeFirstLastQuotes(data);
         // 將結果顯示在結果窗口中
         const resultWindow = document.getElementById("result-window");
-        resultWindow.innerHTML += '<hr><h5>AI 的回應</h5><div id="llm-help-response">' + cleanText + "</div>";
+        resultWindow.innerHTML += '<hr><h4>AI 的回應</h4><div id="llm-help-response">' + cleanText + "</div>";
       })
       .catch((error) => {
         console.error("Error:", error);
@@ -1476,6 +1476,7 @@
         callLLMForHelpBtn.style.display = "block";
       })
       .finally(() => {
+        const callLLMForHelpLoader = document.getElementById("callLLMForHelpLoader");
         if (callLLMForHelpLoader) {
           callLLMForHelpLoader.style.display = "none";
         }

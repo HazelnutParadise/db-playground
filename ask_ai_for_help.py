@@ -35,7 +35,7 @@ def ask_ai_for_help(data: dict) -> str | None:
         ```
     """
     response = ask_llm(prompt)
-    response = response.replace("```html", "").replace("`", "").replace("\n", "")
+    response = response.replace("```html", "").replace("```", "").strip()
     return response
 
 
