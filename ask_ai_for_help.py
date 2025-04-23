@@ -34,6 +34,7 @@ def ask_ai_for_help(data: dict) -> str | None:
         </div>
         ```
     5. <pre><code> 中，首行不空行。
+    6. 可使用 <ul> 來顯示多個錯誤分析或修正建議。
     """
     response = ask_llm(prompt)
     response = response.replace("```html", "").replace("```", "").strip()
