@@ -1474,7 +1474,7 @@
         let cleanText = removeFirstLastQuotes(data);
         // 將結果顯示在結果窗口中
         const resultWindow = document.getElementById("result-window");
-        resultWindow.innerHTML += '<hr><h4>AI 的回應</h4><div id="llm-help-response">' + cleanText + "</div>";
+        resultWindow.innerHTML += '<hr><h4>AI 的回應</h4><br><div id="llm-help-response">' + cleanText + "</div>";
       })
       .catch((error) => {
         console.error("Error:", error);
