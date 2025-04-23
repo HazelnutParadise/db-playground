@@ -29,7 +29,7 @@ def ask_ai_for_help(data: dict) -> str | None:
             <p>這裡是錯誤分析的內容...</p>
             <h5>修正建議</h5>
             <p>這裡是修正建議的內容...</p>
-            <h5>修正後的 SQL 查詢</h5>
+            <h5>修正後的 SQL</h5>
             <pre><code>這裡是修正後的 SQL 查詢片段...</code></pre>
         </div>
         ```
