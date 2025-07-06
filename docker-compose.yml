@@ -2,7 +2,7 @@ services:
   app:
     image: db-playground-app:latest
     ports:
-      - "4998:5000"
+      - "127.0.0.1:4998:5000"
     networks:
       - dbplayground-backend
       - ollama-net
