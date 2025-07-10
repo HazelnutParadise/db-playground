@@ -6,16 +6,14 @@ def remove_empty_or_nan_rows_or_columns(df: pd.DataFrame) -> pd.DataFrame:
     return new_df.dropna(how='all')
 
 def infer_type(value) -> str:
-    """ 推斷值的資料類型為 'int'、'float' 或 'str' """
-    try:
-        int_value = int(value)
+    """推斷值的資料類型為 'int'、'float' 或 'str'"""
+    if isinstance(value, float):
+        return 'float'
+    elif isinstance(value, int) and not isinstance(value, bool):
         return 'int'
-    except ValueError:
-        try:
-            float_value = float(value)
-            return 'float'
-        except ValueError:
-            return 'str'
+    else:
+        return 'str'
+
 
 def find_header_row(df: pd.DataFrame) -> int:
     num_rows = df.shape[0]
@@ -53,7 +51,9 @@ def create_sql_from_df(df: pd.DataFrame, table_name: str) -> str:
     create_table_statement = f'CREATE TABLE `{table_name}` ('
     column_definitions = []
     for column in df.columns:
-        sql_type = infer_sql_type(df[column])
+        series = df[column]
+        assert isinstance(series, pd.Series)
+        sql_type = infer_sql_type(series)
         column_definitions.append(f"`{column}` {sql_type}")
     create_table_statement += ', '.join(column_definitions)
     create_table_statement += ');'
