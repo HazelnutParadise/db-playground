@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Request, File, UploadFile, Form
+from fastapi import APIRouter, FastAPI, Request, File, UploadFile, Form
 from fastapi.responses import JSONResponse
 import pandas as pd
 import io
@@ -10,7 +10,11 @@ from internal.ask_ai_for_help import ask_ai_for_help as ask_ai_for_help_func
 
 
 def set_api(app: FastAPI) -> None:
-    @app.post('/execute')
+    api_router = APIRouter(
+        prefix="/api", tags=["api"]
+    )
+
+    @api_router.post('/execute')
     async def execute_sql(request: Request) -> JSONResponse:
         data: dict[str, Any] = await request.json()
         db_type: str | None = data.get('dbType')
@@ -48,7 +52,7 @@ def set_api(app: FastAPI) -> None:
                 "result": str(e)
             })
 
-    @app.post("/csv-to-sql")
+    @api_router.post("/csv-to-sql")
     async def csv_to_sql(file: UploadFile = File(...), table_name: str = Form(...)) -> JSONResponse:
         if file.content_type == 'text/csv':
             try:
@@ -66,7 +70,7 @@ def set_api(app: FastAPI) -> None:
         else:
             return JSONResponse(status_code=400, content={"error": "Invalid file type"})
 
-    @app.post("/call-llm-for-help")
+    @api_router.post("/call-llm-for-help")
     async def call_llm_for_help(request: Request) -> JSONResponse:
         data: dict[str, Any] = await request.json()
         result: str | None = ask_ai_for_help_func(data={

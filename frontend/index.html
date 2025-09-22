@@ -1515,7 +1515,7 @@
     if (callLLMForHelpLoader) {
       callLLMForHelpLoader.style.display = "inline-block";
     }
-    fetch("/call-llm-for-help", {
+    fetch("/api/call-llm-for-help", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -1589,7 +1589,7 @@
     runButton.classList.add("running-btn");
 
     // 發送請求到後端
-    fetch("/execute", {
+    fetch("/api/execute", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -1824,7 +1824,7 @@
     formData.append("table_name", tableName);
 
     const response = await fetch(
-      "/csv-to-sql",
+      "/api/csv-to-sql",
       {
         method: "POST",
         body: formData,
