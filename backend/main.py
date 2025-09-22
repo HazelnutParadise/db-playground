@@ -1,9 +1,10 @@
 from fastapi import FastAPI
 from fastapi.responses import HTMLResponse
-from internal.api import set_api
+
+from internal.api import api_router
 
 app = FastAPI()
-set_api(app)
+app.include_router(api_router)
 
 
 @app.get('/')
