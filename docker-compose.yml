@@ -1,6 +1,9 @@
 services:
   app:
     image: db-playground-app:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
     ports:
       - "127.0.0.1:4998:5000"
     networks:

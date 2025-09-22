@@ -25,8 +25,5 @@ COPY . .
 # 安裝 Python 依賴
 RUN pip install --no-cache-dir -r requirements.txt
 
-# 暴露 5000 端口
-EXPOSE 5000
-
 # 運行應用
-CMD ["python", "app.py"]
+CMD ["python", "main.py"]

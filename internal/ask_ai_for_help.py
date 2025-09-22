@@ -1,7 +1,8 @@
-from llm import ask_llm
+from internal.llm import ask_llm
+
 
 def ask_ai_for_help(data: dict) -> str | None:
-    prompt = f"""
+    prompt: str = f"""
     你是一個 SQL 專家，以下 SQL 查詢有語法錯誤，請解釋為何錯誤，並提供修正建議：
     - db_type: {data['db_type']}
     - db_version: {data['db_version']}
@@ -36,13 +37,14 @@ def ask_ai_for_help(data: dict) -> str | None:
     5. <pre><code> 中，首行不空行。
     6. 可使用 <ul> 來顯示多個錯誤分析或修正建議。
     """
-    response = ask_llm(prompt)
-    response = response.replace("```html", "").replace("```", "").strip()
+    response: str | None = ask_llm(prompt)
+    if response:
+        response = response.replace("```html", "").replace("```", "").strip()
     return response
 
 
 if __name__ == "__main__":
-    data = {
+    data: dict[str, str] = {
         "db_type": "mysql",
         "version": "8.0",
         "schema_sqls": "CREATE TABLE test (id INT PRIMARY KEY, name VARCHAR(50));",
