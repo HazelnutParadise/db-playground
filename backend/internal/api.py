@@ -13,6 +13,7 @@ def set_api(app: FastAPI) -> None:
     api_router = APIRouter(
         prefix="/api", tags=["api"]
     )
+    app.include_router(api_router)
 
     @api_router.post('/execute')
     async def execute_sql(request: Request) -> JSONResponse:
