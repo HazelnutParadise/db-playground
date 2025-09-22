@@ -17,5 +17,7 @@ COPY . .
 # 安裝 Python 依賴
 RUN cd backend && pip install --no-cache-dir -r requirements.txt
 
+WORKDIR /app/backend
+
 # 運行應用
-CMD ["python", "backend/main.py"]
+CMD ["python", "main.py"]
