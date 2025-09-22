@@ -118,7 +118,7 @@ async def execute_sql_statements(db_type: str, version: str, schema_sqls: list[s
     except Exception as e:
         raise e
     finally:
-        await drop_database(db_type, version, db_name)
         await conn.disconnect() if isinstance(conn, databases.Database) else await conn.close()
+        await drop_database(db_type, version, db_name)
 
     return response
