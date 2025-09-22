@@ -43,25 +43,29 @@ async def parse_queries(full_query: str) -> list[str]:
 async def drop_database(db_type: str, version: str, db_name: str) -> None:
     admin_db_url: str = await _build_database_url(db_type, version, "master" if db_type == "mssql" else "mysql" if db_type == "mysql" else "postgres")
 
-    if db_type == "postgres":
-        conn: asyncpg.Connection = await asyncpg.connect(admin_db_url)
-        try:
-            # 終止現有連線
-            await conn.execute(f'''
-                SELECT pg_terminate_backend(pid)
-                FROM pg_stat_activity
-                WHERE datname = $1
-                AND pid <> pg_backend_pid()
-            ''', db_name)
-            # 安全刪除資料庫
-            await conn.execute(f'DROP DATABASE IF EXISTS "{db_name}"')
-        finally:
-            await conn.close()
-    else:
-        admin_db = databases.Database(admin_db_url)
-        await admin_db.connect()
-        await admin_db.execute(f"DROP DATABASE IF EXISTS {db_name}")
-        await admin_db.disconnect()
+    try:
+        if db_type == "postgres":
+            conn: asyncpg.Connection = await asyncpg.connect(admin_db_url)
+            try:
+                # 終止現有連線
+                await conn.execute(f'''
+                    SELECT pg_terminate_backend(pid)
+                    FROM pg_stat_activity
+                    WHERE datname = $1
+                    AND pid <> pg_backend_pid()
+                ''', db_name)
+                # 安全刪除資料庫
+                await conn.execute(f'DROP DATABASE IF EXISTS "{db_name}"')
+            finally:
+                await conn.close()
+        else:
+            admin_db = databases.Database(admin_db_url)
+            await admin_db.connect()
+            await admin_db.execute(f"DROP DATABASE IF EXISTS {db_name}")
+            await admin_db.disconnect()
+    except Exception as e:
+        # 記錄刪除失敗，但不拋出異常以避免掩蓋原始錯誤
+        print(f"Warning: Failed to drop database {db_name}: {e}")
 
 
 async def execute_sql_statements(db_type: str, version: str, schema_sqls: list[str], queries: list[str]) -> str:
