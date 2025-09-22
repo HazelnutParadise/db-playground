@@ -3,7 +3,7 @@ from fastapi.responses import JSONResponse
 import pandas as pd
 import io
 import internal.execute as execute
-import csv_to_sql as c2q
+import internal.csv_to_sql as c2q
 from typing import Any
 
 from internal.ask_ai_for_help import ask_ai_for_help as ask_ai_for_help_func
