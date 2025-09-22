@@ -31,6 +31,7 @@
     }
 
     * {
+      box-sizing: border-box;
       transition: background-color 0.5s ease;
     }
 
@@ -726,7 +727,7 @@
 <body>
   <div class="container-fluid" style="width: 100vw; display: flex; flex-direction: column">
     <div style="display: flex; flex-wrap: nowrap; width: 100%">
-      <div class="col-md-3 sidebar sidebar-expanded" id="sidebar">
+      <aside class="col-md-3 sidebar sidebar-expanded" id="sidebar">
         <div class="panel" style="margin-right: 10px">
           <div class="sidebar-collapse d-flex justify-content-between align-items-center" style="height: 40px">
             <h5 id="sidebarTitle">Options</h5>
@@ -914,7 +915,7 @@
             <i class="fas fa-bars" id="sidebarToggleCollapsed"></i>
           </div>
         </div>
-      </div>
+      </aside>
       <main class="col-md-9" id="mainContent" style="width: calc(100% - 267px)">
         <div id="editWindows" style="width: 100%; display: flex">
           <div class="panel editor" id="editor1">
