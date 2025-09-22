@@ -14,7 +14,7 @@ async def _create_temporary_database(db_type: str, version: str) -> tuple[str, a
     temp_db_url: str = ""
     conn: asyncpg.Connection | databases.Database | None = None
     if db_type == "postgres":
-        admin_conn = await asyncpg.connect(admin_db_url)
+        admin_conn: asyncpg.Connection = await asyncpg.connect(admin_db_url)
         try:
             await admin_conn.execute(f'CREATE DATABASE "{db_name}"')
         finally:
