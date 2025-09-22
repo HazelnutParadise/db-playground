@@ -8,7 +8,7 @@ set_api(app)
 
 @app.get('/')
 def index() -> HTMLResponse:
-    with open('./frontend/index.html', 'r') as f:
+    with open('../frontend/index.html', 'r') as f:
         html_content: str = f.read()
     return HTMLResponse(html_content)
 
