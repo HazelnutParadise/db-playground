@@ -3,7 +3,7 @@ from fastapi.responses import HTMLResponse
 
 from internal.api import api_router
 
-app = FastAPI()
+app = FastAPI(docs_url=None, redoc_url=None)
 app.include_router(api_router)
 
 
