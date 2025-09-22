@@ -10,15 +10,31 @@ async def _create_temporary_database(db_type: str, version: str) -> tuple[str, a
     db_name: str = f"temp_{uuid.uuid4().hex}"
     admin_db_url: str = await _build_database_url(db_type, version, "master" if db_type == "mssql" else "mysql" if db_type == "mysql" else "postgres")
 
+    # 創建資料庫
+    temp_db_url: str = ""
     conn: asyncpg.Connection | databases.Database | None = None
     if db_type == "postgres":
-        conn = await asyncpg.connect(admin_db_url)
-        assert conn is not None
-        await conn.execute(f'CREATE DATABASE "{db_name}"')
+        admin_conn = await asyncpg.connect(admin_db_url)
+        try:
+            await admin_conn.execute(f'CREATE DATABASE "{db_name}"')
+        finally:
+            await admin_conn.close()
+
+        # 連接到新創建的臨時資料庫
+        temp_db_url = await _build_database_url(db_type, version, db_name)
+        conn = await asyncpg.connect(temp_db_url)
     else:
-        conn = databases.Database(admin_db_url)
+        admin_db = databases.Database(admin_db_url)
+        await admin_db.connect()
+        try:
+            await admin_db.execute(f"CREATE DATABASE {db_name}")
+        finally:
+            await admin_db.disconnect()
+
+        # 連接到新創建的臨時資料庫
+        temp_db_url = await _build_database_url(db_type, version, db_name)
+        conn = databases.Database(temp_db_url)
         await conn.connect()
-        await conn.execute(f"CREATE DATABASE {db_name}")
 
     return db_name, conn
 
