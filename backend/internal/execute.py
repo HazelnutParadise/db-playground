@@ -84,7 +84,7 @@ async def drop_database(db_type: str, version: str, db_name: str) -> None:
         print(f"Warning: Failed to drop database {db_name}: {e}")
 
 
-async def execute_sql_statements(db_type: str, version: str, schema_sqls: list[str], queries: list[str]) -> str:
+async def execute_sql_statements(db_type: str, version: str, schema_sqls: list[str], queries: list[str]) -> dict:
     db_name: str | None = None
     conn: asyncpg.Connection | databases.Database | None = None
     try:
@@ -95,14 +95,15 @@ async def execute_sql_statements(db_type: str, version: str, schema_sqls: list[s
         raise HTTPException(
             status_code=500, detail="Failed to create temporary database")
 
-    response: str = ""
+    response: dict = {}
     try:
         if schema_sqls:
             for schema_sql in schema_sqls:
                 await conn.execute(schema_sql)
-            response += f'<h5>Schema executed successfully!</h5><br>'
+            response["schema_executed"] = True
 
         if queries:
+            response["queries"] = []
             query_num: int = 0
             for query in queries:
                 query_num += 1
@@ -114,27 +115,19 @@ async def execute_sql_statements(db_type: str, version: str, schema_sqls: list[s
                     if query_result:
                         columns: list[str] = list(query_result[0].keys())
                         num_of_columns: int = len(columns)
+                        data = [dict(record) for record in query_result]
                     else:
                         columns = []
                         num_of_columns = 0
+                        data = []
 
-                    response += f"<h5>Query #{query_num} [({num_of_rows} rows) * ({num_of_columns} columns)]</h5>"
-                    html_content: str = ""
-                    if query_result:
-                        # 開始HTML表格
-                        html_content = "<table><tr>" + \
-                            "".join(
-                                f"<th>{col}</th>" for col in columns) + "</tr>"
-                        for record in query_result:
-                            record: dict[Any, Any] = dict(record)
-                            record_values: list[Any] = list(record.values())
-                            row: str = "".join(
-                                f"<td>{(record_v if record_v is not None else 'null')}</td>" for record_v in record_values)
-                            html_content += f"<tr>{row}</tr>"
-                        html_content += "</table>"
-                    else:
-                        html_content = "<blockquote><strong>No results.</strong></blockquote>"
-                    response += html_content + "<br>"
+                    query_info = {
+                        "query_num": query_num,
+                        "rows": num_of_rows,
+                        "columns": columns,
+                        "data": data
+                    }
+                    response["queries"].append(query_info)
     except Exception as e:
         raise e
     finally:

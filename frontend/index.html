@@ -1625,10 +1625,34 @@
           + '<br>'
         )
         // 處理響應數據
-        let cleanText = removeFirstLastQuotes(data);
-        originalResult = cleanText;
+        let htmlContent = "";
+        if (status === "success" && typeof data === "object") {
+          // 解析JSON數據並生成HTML
+          if (data.schema_executed) {
+            htmlContent += '<h5>Schema executed successfully!</h5><br>';
+          }
+          if (data.queries && data.queries.length > 0) {
+            data.queries.forEach(query => {
+              htmlContent += `<h5>Query #${query.query_num} [(${query.rows} rows) * (${query.columns.length} columns)]</h5>`;
+              if (query.data && query.data.length > 0) {
+                htmlContent += "<table><tr>" + query.columns.map(col => `<th>${col}</th>`).join("") + "</tr>";
+                query.data.forEach(record => {
+                  const row = query.columns.map(col => `<td>${record[col] !== null ? record[col] : 'null'}</td>`).join("");
+                  htmlContent += `<tr>${row}</tr>`;
+                });
+                htmlContent += "</table>";
+              } else {
+                htmlContent += "<blockquote><strong>No results.</strong></blockquote>";
+              }
+              htmlContent += "<br>";
+            });
+          }
+        } else {
+          htmlContent = removeFirstLastQuotes(data);
+        }
+        originalResult = htmlContent;
         console.log(data);
-        resultWindow.innerHTML = cleanText;
+        resultWindow.innerHTML = htmlContent;
         (async () => {
           function toggleTableRows(table, icon, initial = false) {
             let isCollapsed = icon.className === "table-collapsed-icon";

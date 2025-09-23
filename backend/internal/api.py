@@ -60,7 +60,7 @@ async def execute_sql(request: ExecuteRequest) -> JSONResponse:
     schema_sqls: list[str] = await execute.parse_queries(schema_sqls_str)
     queries: list[str] = await execute.parse_queries(queries_str)
     try:
-        response: str = await execute.execute_sql_statements(db_type, version, schema_sqls, queries)
+        response: dict = await execute.execute_sql_statements(db_type, version, schema_sqls, queries)
         if not response:
             return JSONResponse(content={
                 "status": "success",
