@@ -755,7 +755,7 @@
               <script>
                 let databases = {}; // 儲存從後端獲取的資料庫資料
 
-                fetch('/api/db-list')
+                fetch('/api/databases')
                   .then((response) => response.json())
                   .then((data) => {
                     const dbTypeSelect = document.getElementById("db-type");
