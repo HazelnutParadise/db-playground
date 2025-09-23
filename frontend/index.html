@@ -1595,11 +1595,11 @@
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        schemaSql: schemaSql,
-        querySql: querySql,
-        dbType: dbType,
-        version: dbVersion,
-      }), // 這裡根據需要調整資料庫類型和版本
+        schema_sql: schemaSql,
+        query_sql: querySql,
+        db_type: dbType,
+        db_version: dbVersion,
+      }),
     })
       .then((response) => response.json())
       .then((resJson) => {

@@ -1,11 +1,13 @@
-from fastapi import APIRouter, Request, File, UploadFile, Form
-from fastapi.responses import JSONResponse
 import pandas as pd
 import io
 import internal.execute as execute
 import internal.csv_to_sql as c2q
+from fastapi import APIRouter, Request, File, UploadFile, Form
+from fastapi.responses import JSONResponse
 from typing import Any
+from pydantic import BaseModel, field_validator, ValidationInfo
 
+from internal.consts import ALLOW_DB_TYPES_AND_VERSIONS
 from internal.ask_ai_for_help import ask_ai_for_help as ask_ai_for_help_func
 
 api_router = APIRouter(
@@ -13,18 +15,35 @@ api_router = APIRouter(
 )
 
 
+class ExecuteRequest(BaseModel):
+    db_type: str
+    db_version: str
+    schema_sql: str | None = None
+    query_sql: str | None = None
+
+    @field_validator('db_type')
+    def validate_db_type(cls, v: str) -> str:
+        if v not in ALLOW_DB_TYPES_AND_VERSIONS:
+            raise ValueError(
+                f"db_type must be one of {ALLOW_DB_TYPES_AND_VERSIONS.keys()}")
+        return v
+
+    @field_validator('db_version')
+    def validate_db_version(cls, v: str, info: ValidationInfo) -> str:
+        db_type: str = info.data['db_type']
+        if v not in ALLOW_DB_TYPES_AND_VERSIONS[db_type]:
+            raise ValueError(
+                f"db_version must be one of {ALLOW_DB_TYPES_AND_VERSIONS[db_type]} for db_type '{db_type}'")
+        return v
+
+
 @api_router.post('/execute')
-async def execute_sql(request: Request) -> JSONResponse:
-    data: dict[str, Any] = await request.json()
-    db_type: str | None = data.get('dbType')
-    version: str | None = data.get('version')
-    schema_sqls_str: str | None = data.get('schemaSql')
-    queries_str: str | None = data.get('querySql')
-    if not db_type or not version:
-        return JSONResponse(status_code=400, content={
-            "status": "error",
-            "result": "Missing dbType or version"
-        })
+async def execute_sql(request: ExecuteRequest) -> JSONResponse:
+    db_type: str = request.db_type
+    version: str = request.db_version
+    schema_sqls_str: str | None = request.schema_sql
+    queries_str: str | None = request.query_sql
+
     if not schema_sqls_str and not queries_str:
         return JSONResponse(status_code=400, content={
             "status": "error",
@@ -46,7 +65,7 @@ async def execute_sql(request: Request) -> JSONResponse:
             "result": response
         })
     except Exception as e:
-        return JSONResponse(content={
+        return JSONResponse(status_code=500, content={
             "status": "error",
             "result": str(e)
         })
@@ -84,7 +103,9 @@ async def call_llm_for_help(request: Request) -> JSONResponse:
     return JSONResponse(content={
         "status": "success",
         "result": result
-    }) if result else JSONResponse(content={
-        "status": "error",
-        "result": "No response from AI."
-    })
+    }) if result else JSONResponse(
+        status_code=500,
+        content={
+            "status": "error",
+            "result": "No response from AI."
+        })
