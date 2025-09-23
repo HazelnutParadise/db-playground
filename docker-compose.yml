@@ -12,6 +12,15 @@ services:
     restart: unless-stopped
 
 # MySQL
+  mysql94:
+    image: mysql:9.4
+    environment:
+      MYSQL_ROOT_PASSWORD: secret
+    command: --skip-log-bin --innodb_flush_log_at_trx_commit=0 --innodb_log_file_size=1M --innodb_use_native_aio=0
+    networks:
+      - dbplayground-backend
+    restart: unless-stopped
+
   mysql90:
     image: mysql:9.0
     environment:
@@ -67,6 +76,16 @@ services:
     restart: unless-stopped
 
 # PostgreSQL
+  postgres17:
+      image: postgres:17
+      environment:
+        POSTGRES_PASSWORD: secret
+        POSTGRES_INITDB_ARGS: "--nosync"
+      command: postgres -c max_wal_senders=0 -c wal_level=minimal -c archive_mode=off -c fsync=off -c synchronous_commit=off -c logging_collector=off -c log_statement=none
+      networks:
+        - dbplayground-backend
+      restart: unless-stopped
+
   postgres16:
     image: postgres:16
     environment:
