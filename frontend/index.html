@@ -753,47 +753,54 @@
                 </option>
               </select>
               <script>
+                let databases = {}; // 儲存從後端獲取的資料庫資料
+
+                fetch('/api/db-list')
+                  .then((response) => response.json())
+                  .then((data) => {
+                    const dbTypeSelect = document.getElementById("db-type");
+                    const dbVersionSelect = document.getElementById("db-version");
+                    databases = data.databases;
+
+                    // 動態加入資料庫選項
+                    for (const dbType in databases) {
+                      const option = document.createElement("option");
+                      option.value = dbType;
+                      option.textContent =
+                        dbType.charAt(0).toUpperCase() + dbType.slice(1);
+                      dbTypeSelect.appendChild(option);
+                    }
+
+                    // 預設選擇第一個資料庫類型並觸發版本選項更新
+                    if (dbTypeSelect.options.length > 1) {
+                      dbTypeSelect.selectedIndex = 1;
+                      const event = new Event("change");
+                      dbTypeSelect.dispatchEvent(event);
+                    }
+                  })
+                  .catch((error) => {
+                    console.error("Error fetching database list:", error);
+                  });
+
                 // 動態加入版本選項
                 document
                   .getElementById("db-type")
                   .addEventListener("change", function () {
                     const dbType = this.value;
                     const dbVersion = document.getElementById("db-version");
-                    let options = [];
-                    switch (dbType) {
-                      case "mysql":
-                        options = ["9.0", "8.4", "8.0", "5.7", "5.6", "5.5"];
-                        break;
-                      case "postgres":
-                        options = [
-                          "16",
-                          "15",
-                          "14",
-                          "13",
-                          "12",
-                          "11",
-                          "10",
-                          "9.6",
-                          "9.5",
-                          "9.4",
-                        ];
-                        break;
-                      case "mssql":
-                        options = ["2022", "2019", "2017"];
-                        break;
-                      default:
-                        options = ["Select Version"];
+
+                    if (databases[dbType]) {
+                      // 使用後端傳來的版本資料
+                      const versions = databases[dbType];
+                      let versionList = '<option value="Select Version">Select Version</option>';
+                      for (const version of versions) {
+                        versionList += `<option value="${version}">${version}</option>`;
+                      }
+                      dbVersion.innerHTML = versionList;
+                    } else {
+                      // 如果沒有找到對應的版本，使用預設選項
+                      dbVersion.innerHTML = '<option value="Select Version">Select Version</option>';
                     }
-                    let versionList = [];
-                    for (let i = 0; i < options.length; i++) {
-                      versionList +=
-                        '<option value="' +
-                        options[i] +
-                        '">' +
-                        options[i] +
-                        "</option>";
-                    }
-                    dbVersion.innerHTML = versionList;
                   });
               </script>
             </div>

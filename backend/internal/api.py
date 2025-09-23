@@ -15,6 +15,12 @@ api_router = APIRouter(
 )
 
 
+@api_router.get("/db-list")
+async def get_db_list() -> JSONResponse:
+    db_list: dict[str, list[str]] = ALLOW_DB_TYPES_AND_VERSIONS
+    return JSONResponse(content={"databases": db_list})
+
+
 class ExecuteRequest(BaseModel):
     db_type: str
     db_version: str
