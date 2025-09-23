@@ -1521,11 +1521,11 @@
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        dbType: document.getElementById("db-type").value,
-        dbVersion: document.getElementById("db-version").value,
-        schemaSql: schemaEditor.getValue().trim(),
-        querySql: queryEditor.getValue().trim(),
-        errorMessage: originalResult,
+        db_type: document.getElementById("db-type").value,
+        db_version: document.getElementById("db-version").value,
+        schema_sql: schemaEditor.getValue().trim(),
+        query_sql: queryEditor.getValue().trim(),
+        error_message: originalResult,
       }),
     })
       .then((response) => response.json())

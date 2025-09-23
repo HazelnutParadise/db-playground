@@ -90,15 +90,37 @@ async def csv_to_sql(file: UploadFile = File(...), table_name: str = Form(...)) 
         return JSONResponse(status_code=400, content={"error": "Invalid file type"})
 
 
+class LLMHelpRequest(BaseModel):
+    db_type: str
+    db_version: str
+    schema_sql: str | None = None
+    query_sql: str | None = None
+    error_message: str
+
+    @field_validator('db_type')
+    def validate_db_type(cls, v: str) -> str:
+        if v not in ALLOW_DB_TYPES_AND_VERSIONS:
+            raise ValueError(
+                f"db_type must be one of {ALLOW_DB_TYPES_AND_VERSIONS.keys()}")
+        return v
+
+    @field_validator('db_version')
+    def validate_db_version(cls, v: str, info: ValidationInfo) -> str:
+        db_type: str = info.data['db_type']
+        if v not in ALLOW_DB_TYPES_AND_VERSIONS[db_type]:
+            raise ValueError(
+                f"db_version must be one of {ALLOW_DB_TYPES_AND_VERSIONS[db_type]} for db_type '{db_type}'")
+        return v
+
+
 @api_router.post("/call-llm-for-help")
-async def call_llm_for_help(request: Request) -> JSONResponse:
-    data: dict[str, Any] = await request.json()
+async def call_llm_for_help(request: LLMHelpRequest) -> JSONResponse:
     result: str | None = ask_ai_for_help_func(data={
-        'db_type': data.get('dbType'),
-        'db_version': data.get('dbVersion'),
-        'schema_sqls': data.get('schemaSql'),
-        'queries': data.get('querySql'),
-        'error_message': data.get('errorMessage')
+        'db_type': request.db_type,
+        'db_version': request.db_version,
+        'schema_sqls': request.schema_sql,
+        'queries': request.query_sql,
+        'error_message': request.error_message
     })
     return JSONResponse(content={
         "status": "success",
