@@ -1507,7 +1507,7 @@
     return s;
   }
 
-  function callLLMForHelp() {
+  async function callLLMForHelp() {
     // 隱藏按鈕
     const callLLMForHelpBtn = document.getElementById("callLLMForHelpBtn");
     if (callLLMForHelpBtn) {
@@ -1517,41 +1517,48 @@
     if (callLLMForHelpLoader) {
       callLLMForHelpLoader.style.display = "inline-block";
     }
-    fetch("/api/call-llm-for-help", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        db_type: document.getElementById("db-type").value,
-        db_version: document.getElementById("db-version").value,
-        schema_sql: schemaEditor.getValue().trim(),
-        query_sql: queryEditor.getValue().trim(),
-        error_message: originalResult,
-      }),
-    })
-      .then((response) => response.json())
-      .then((resJson) => {
-        const status = resJson.status;
-        let data = resJson.result;
-        status === "error" && (data = "ERROR: " + data);
-        // 處理響應數據
-        let cleanText = removeFirstLastQuotes(data);
-        // 將結果顯示在結果窗口中
-        const resultWindow = document.getElementById("result-window");
-        resultWindow.innerHTML += '<hr><h4>AI 的回應</h4><br><div id="llm-help-response">' + cleanText + "</div>";
+
+    try {
+      const response = await fetch("/api/call-llm-for-help", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          db_type: document.getElementById("db-type").value,
+          db_version: document.getElementById("db-version").value,
+          schema_sql: schemaEditor.getValue().trim(),
+          query_sql: queryEditor.getValue().trim(),
+          error_message: originalResult,
+        }),
       })
-      .catch((error) => {
-        console.error("Error:", error);
-        showSnackbar("Error: " + error.message);
-        callLLMForHelpBtn.style.display = "block";
-      })
-      .finally(() => {
-        const callLLMForHelpLoader = document.getElementById("callLLMForHelpLoader");
-        if (callLLMForHelpLoader) {
-          callLLMForHelpLoader.style.display = "none";
-        }
-      });
+
+      const responseJson = await response.json();
+      if (!responseJson) {
+        throw new Error("No response from server");
+      }
+
+      if (!response.ok) {
+        throw new Error(responseJson.error);
+      }
+
+      let data = resJson.result;
+      status === "error" && (data = "ERROR: " + data);
+      // 處理響應數據
+      let cleanText = removeFirstLastQuotes(data);
+      // 將結果顯示在結果窗口中
+      const resultWindow = document.getElementById("result-window");
+      resultWindow.innerHTML += '<hr><h4>AI 的回應</h4><br><div id="llm-help-response">' + cleanText + "</div>";
+    } catch (error) {
+      console.error("Error:", error);
+      showSnackbar("Error: " + error.message);
+      callLLMForHelpBtn.style.display = "block";
+    } finally {
+      const callLLMForHelpLoader = document.getElementById("callLLMForHelpLoader");
+      if (callLLMForHelpLoader) {
+        callLLMForHelpLoader.style.display = "none";
+      }
+    }
   }
 
   let originalResult = "";

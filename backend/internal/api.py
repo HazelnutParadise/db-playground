@@ -129,11 +129,9 @@ async def call_llm_for_help(request: LLMHelpRequest) -> JSONResponse:
         'error_message': request.error_message
     })
     return JSONResponse(content={
-        "status": "success",
         "result": result
     }) if result else JSONResponse(
         status_code=500,
         content={
-            "status": "error",
-            "result": "No response from AI."
+            "error": "No response from AI."
         })
