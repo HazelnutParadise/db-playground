@@ -1542,8 +1542,7 @@
         throw new Error(responseJson.error);
       }
 
-      let data = resJson.result;
-      status === "error" && (data = "ERROR: " + data);
+      let data = responseJson.result;
       // 處理響應數據
       let cleanText = removeFirstLastQuotes(data);
       // 將結果顯示在結果窗口中
