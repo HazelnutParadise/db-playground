@@ -8,7 +8,7 @@ services:
       - "127.0.0.1:4998:5000"
     networks:
       - dbplayground-backend
-      - ollama-net
+      - infra-net
     restart: unless-stopped
 
 # MySQL
@@ -180,5 +180,5 @@ services:
 networks:
   dbplayground-backend:
     driver: bridge
-  ollama-net:
+  infra-net:
     external: true
