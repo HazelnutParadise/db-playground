@@ -1,7 +1,7 @@
 from langchain_core.messages.base import BaseMessage
 from langchain_ollama import ChatOllama
 
-model: str = "gemma3:12b"
+model: str = "gemma4:e2b"
 llm: ChatOllama = ChatOllama(model=model, base_url="http://ollama:11434")
 
 
