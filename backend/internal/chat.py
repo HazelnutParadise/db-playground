@@ -1,5 +1,6 @@
 from contextlib import contextmanager
 import hashlib
+import json
 import hmac
 import os
 import secrets
@@ -10,6 +11,7 @@ from pathlib import Path
 from typing import Callable
 
 from internal.chat_names import generate_name
+from internal.chat_attachments import serialize_attachment
 
 RETENTION_SECONDS = 7 * 24 * 60 * 60
 MAX_MESSAGE_LENGTH = 1000
@@ -52,7 +54,7 @@ class ChatStore:
         conn.execute('PRAGMA secure_delete = ON')
         if not self._ready:
             version = conn.execute('PRAGMA user_version').fetchone()[0]
-            if version > 2:
+            if version > 3:
                 conn.close()
                 raise RuntimeError('Unsupported chat database version')
             migration = Path(__file__).resolve().parent.parent / 'migrations' / '0001_chat.sql'
@@ -60,6 +62,8 @@ class ChatStore:
                 conn.executescript(migration.read_text(encoding='utf-8'))
             if version < 2:
                 conn.executescript((migration.parent / '0002_chat_names.sql').read_text(encoding='utf-8'))
+            if version < 3:
+                conn.executescript((migration.parent / '0003_chat_attachments.sql').read_text(encoding='utf-8'))
             conn.execute('INSERT OR IGNORE INTO chat_settings(key, value) VALUES (?, ?)',
                          ('name_key', secrets.token_bytes(32)))
             conn.commit()
@@ -119,15 +123,22 @@ class ChatStore:
         now = self.clock()
         name = self._name(identity, ip)
         with self._lock, self._connect() as conn:
-            rows = conn.execute('SELECT id, name, body, created_at FROM chat_messages WHERE deleted_at IS NULL AND created_at > ? ORDER BY id DESC LIMIT 100',
+            rows = conn.execute('SELECT id, name, body, created_at, attachment FROM chat_messages WHERE deleted_at IS NULL AND created_at > ? ORDER BY id DESC LIMIT 100',
                                 (now - RETENTION_SECONDS,)).fetchall()
             self._log(conn, 'GET', 200, name, ip, user_agent, now)
-            return {'name': name, 'messages': [dict(row) for row in reversed(rows)]}
+            messages = [dict(row) for row in reversed(rows)]
+            for message in messages:
+                message['attachment'] = json.loads(message['attachment']) if message['attachment'] else None
+            return {'name': name, 'messages': messages}
 
-    def send(self, identity: tuple[str, str], text: str, ip: str, user_agent: str) -> dict:
+    def send(self, identity: tuple[str, str], text: str, ip: str, user_agent: str, attachment=None) -> dict:
         now = self.clock()
         text = text.strip()
         if not text or len(text) > MAX_MESSAGE_LENGTH:
+            raise InvalidMessage()
+        try:
+            attachment_json = serialize_attachment(attachment)
+        except (ValueError, TypeError, OverflowError):
             raise InvalidMessage()
         name = self._name(identity, ip)
         with self._lock, self._connect() as conn:
@@ -136,11 +147,11 @@ class ChatStore:
                 self._log(conn, 'POST', 429, name, ip, user_agent, now)
                 conn.commit()
                 raise RateLimited()
-            cursor = conn.execute('INSERT INTO chat_messages(name, body, created_at, updated_at) VALUES (?, ?, ?, ?)',
-                                  (name, text, now, now))
+            cursor = conn.execute('INSERT INTO chat_messages(name, body, created_at, updated_at, attachment) VALUES (?, ?, ?, ?, ?)',
+                                  (name, text, now, now, attachment_json))
             self._log(conn, 'POST', 201, name, ip, user_agent, now)
             self._last_post[identity] = now
-            return {'id': cursor.lastrowid, 'name': name, 'body': text, 'created_at': now}
+            return {'id': cursor.lastrowid, 'name': name, 'body': text, 'created_at': now, 'attachment': attachment}
 
     def cleanup(self) -> None:
         now = self.clock()

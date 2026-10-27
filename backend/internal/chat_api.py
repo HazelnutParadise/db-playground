@@ -52,6 +52,7 @@ def metadata(request: Request) -> tuple[str, str]:
 class ChatMessage(BaseModel):
     visitor_id: UUID
     text: str
+    attachment: dict | None = None
 
 
 @chat_router.get('')
@@ -72,11 +73,11 @@ def post_chat(request: Request, message: ChatMessage):
     if parsed.scheme not in ('http', 'https') or parsed.netloc.lower() != request.headers.get('host', '').lower():
         raise HTTPException(403, '無效的請求來源')
     try:
-        return request.app.state.chat.send(identity(request, message.visitor_id), message.text, *metadata(request))
+        return request.app.state.chat.send(identity(request, message.visitor_id), message.text, *metadata(request), attachment=message.attachment)
     except NamingUnavailable:
         raise HTTPException(503, '暱稱暫時無法產生，請稍後再試')
     except InvalidMessage:
-        raise HTTPException(400, '請輸入 1 至 1000 字的訊息')
+        raise HTTPException(400, '訊息或附件格式不正確，或超過大小上限')
     except RateLimited:
         raise HTTPException(429, '請稍等一下再發送')
     except (OSError, sqlite3.Error, RuntimeError):

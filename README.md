@@ -28,6 +28,8 @@ uv run --locked python main.py
 
 聊天室開放所有人匿名發言。匿名名稱由 Ollama 產生並保留以避免重複，登入會員跨裝置一致，未登入訪客由瀏覽器辨識，清除瀏覽器資料或更換瀏覽器會改變名稱。既有訊息保留原先顯示的名稱直到到期。Ollama 預設使用 `http://ollama:11434`，可用 `OLLAMA_BASE_URL` 調整，服務不可用時無法建立新名稱。訊息保留 7 天，服務運行時定期刪除，服務停止期間到期的訊息會在重啟後清除。為維運而記錄的請求資訊（包括來源位址和瀏覽器資訊）也會定期清除，不包含訊息內容。
 
+聊天室可以貼上程式碼，或帶入 Schema、Query 與最近一次成功查詢的結果。結果以按鈕開啟表格視窗；每則附件上限 32 KB，結果最多 5 張表、每張 200 列及 30 欄，超出時請先縮小內容。附件和訊息一樣保留 7 天。
+
 聊天室資料預設保存在 `backend/data/chat.sqlite3`，Docker Compose 使用 `chat_data` 持久化儲存。備份或搬移時需保留此資料，匿名名稱才會維持一致。
 
 ## 會員登入
@@ -39,6 +41,8 @@ uv run --locked python main.py
 - `LOGTO_SESSION_SECRET`：至少 32 個字元的隨機密鑰。
 - `LOGTO_REDIRECT_URI`：Logto 應用程式設定的完整回呼網址。
 
-上述四項需全部設定。請將密鑰保存在部署環境，不要提交至版本控制。本機測試可使用 `http://localhost:5000/auth/callback`，並須在 Logto 同時加入該回呼網址。
+Docker Compose 可將 `.env.example` 複製成專案根目錄的 `.env`，再填入這四項；本機 Compose 回呼網址可使用 `http://localhost:4998/auth/callback`。直接用 Python 啟動時，程式不會自動讀取 `.env`，需自行將這些值設為環境變數，本機回呼網址可使用 `http://localhost:5000/auth/callback`。
+
+上述四項需全部設定，回呼網址也須加入 Logto 應用程式設定。請將密鑰保存在部署環境，不要提交至版本控制。
 
 「登出本站」只結束本站的工作階段，不會登出其他使用同一 Logto 帳號的網站。

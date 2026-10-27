@@ -799,11 +799,29 @@
     .chat-meta strong { color: #168364; opacity: 1; }
     [data-theme="dark"] .chat-meta strong { color: #83d3b2; }
     .chat-body { white-space: pre-wrap; overflow-wrap: anywhere; font-size: .9rem; line-height: 1.5; }
+    .chat-share-label { display: inline-block; padding: 3px 8px; border-radius: 6px; background: #1281611c; color: #126b52; font-size: .74rem; font-weight: 600; }
+    [data-theme="dark"] .chat-share-label { background: #83d3b21c; color: #83d3b2; }
     .chat-compose { border-top: 1px solid #8884; padding: 12px 16px 15px; }
     .chat-compose textarea { display: block; resize: none; width: 100%; min-height: 62px; padding: 9px 11px; border: 1px solid #8887; border-radius: 10px; background: var(--pannel-background-color); color: var(--text-color); font: inherit; font-size: .9rem; }
     .chat-actions { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 8px; }
     .chat-send { padding: 7px 16px; }
     .chat-send:disabled { opacity: .55; cursor: wait; }
+
+    .chat-tools { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 8px; }
+    .chat-tool, .chat-table-button { border: 1px solid #12816188; color: var(--text-color); background: transparent; border-radius: 8px; padding: 5px 8px; font-size: .76rem; cursor: pointer; }
+    .chat-tool[aria-pressed="true"] { background: #128161; color: white; }
+    .chat-attachment-preview { font-size: .76rem; margin: 0 0 8px; overflow-wrap: anywhere; }
+    .chat-attachment-preview button { border: 0; background: transparent; color: var(--text-color); text-decoration: underline; cursor: pointer; }
+    .chat-code { white-space: pre; overflow: auto; padding: 10px; margin: 8px 0 0; border-radius: 8px; background: #80808020; font: .8rem/1.5 monospace; }
+    .chat-table-button { margin-top: 8px; color: #128161; font-weight: 700; }
+    [data-theme="dark"] .chat-table-button { color: #83d3b2; }
+    .chat-dialog { width: min(900px, calc(100vw - 32px)); max-height: 80vh; padding: 20px; border: 1px solid #8885; border-radius: 16px; background: var(--pannel-background-color); color: var(--text-color); }
+    .chat-dialog::backdrop { background: #0009; }
+    .chat-dialog-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+    .chat-dialog-content { overflow: auto; max-height: 60vh; }
+    .chat-dialog table { border-collapse: collapse; margin: 12px 0; width: 100%; }
+    .chat-dialog th, .chat-dialog td { border: 1px solid #8887; padding: 7px 10px; text-align: left; white-space: pre-wrap; overflow-wrap: anywhere; }
+
     @media (max-width: 480px) { .chat-widget { right: 16px; bottom: 16px; } }
 
   </style>
@@ -1373,21 +1391,69 @@
       <div class="chat-header"><strong>資料庫聊天室</strong><small>一起討論資料庫 · 訊息保留 7 天</small></div>
       <div class="chat-messages" id="chat-messages" aria-live="polite"><div class="chat-empty">正在載入訊息…</div></div>
       <form class="chat-compose" id="chat-form" inert>
-        <textarea id="chat-text" maxlength="1000" aria-label="聊天訊息" placeholder="聊聊資料庫吧…" required></textarea>
+        <div class="chat-tools"><button type="button" class="chat-tool" id="chat-code-mode" aria-pressed="false">貼程式碼</button><button type="button" class="chat-tool" id="chat-schema">帶入 Schema</button><button type="button" class="chat-tool" id="chat-query">帶入 Query</button><button type="button" class="chat-tool" id="chat-result">帶入執行結果</button></div>
+        <div class="chat-attachment-preview" id="chat-preview" hidden><span></span> <button type="button" id="chat-remove">移除</button></div>
+        <textarea id="chat-text" maxlength="1000" aria-label="聊天訊息" placeholder="聊聊資料庫吧…"></textarea>
         <div class="chat-actions"><span class="chat-status" id="chat-status">正在取得匿名名稱…</span><button class="chat-send" type="submit">送出</button></div>
       </form>
     </section>
     <button class="chat-toggle" id="chat-toggle" type="button" aria-expanded="false" aria-controls="chat-panel">💬 聊天室</button>
   </div>
+  <dialog class="chat-dialog" id="chat-dialog" aria-labelledby="chat-dialog-title"><div class="chat-dialog-header"><h2 id="chat-dialog-title">執行結果</h2><button type="button" class="chat-tool" id="chat-dialog-close">關閉</button></div><div class="chat-dialog-content" id="chat-dialog-content"></div></dialog>
   <script>
     (() => {
       const panel = document.getElementById('chat-panel'), toggle = document.getElementById('chat-toggle');
       const list = document.getElementById('chat-messages'), form = document.getElementById('chat-form');
       const input = document.getElementById('chat-text'), status = document.getElementById('chat-status');
-      const button = form.querySelector('button');
+      const button = form.querySelector('.chat-send');
       const overlay = document.getElementById('chat-loading'), loadingText = document.getElementById('chat-loading-text');
       const retry = document.getElementById('chat-retry');
-      let timer, loading = false, named = false;
+      const codeMode = document.getElementById('chat-code-mode'), preview = document.getElementById('chat-preview');
+      const dialog = document.getElementById('chat-dialog'), dialogContent = document.getElementById('chat-dialog-content');
+      let timer, loading = false, named = false, attachment = null, lastMessages = null;
+      function selectAttachment(value) {
+        if (value && new TextEncoder().encode(JSON.stringify(value)).length > 32768) { status.textContent = '附件超過 32 KB，請縮小內容'; return; }
+        attachment = value; preview.hidden = !value;
+        preview.querySelector('span').textContent = value ? '已帶入：' + value.label : '';
+      }
+      codeMode.addEventListener('click', () => {
+        const enabled = codeMode.getAttribute('aria-pressed') !== 'true';
+        codeMode.setAttribute('aria-pressed', String(enabled)); input.maxLength = enabled ? 32000 : 1000;
+        input.placeholder = enabled ? '貼上程式碼，保留換行和縮排…' : '聊聊資料庫吧…';
+        input.setAttribute('aria-label', enabled ? '程式碼' : '聊天訊息');
+        if (enabled) selectAttachment(null);
+        input.focus();
+      });
+      document.getElementById('chat-remove').addEventListener('click', () => selectAttachment(null));
+      function attachEditor(editor, label) {
+        if (!editor || !editor.getValue().trim()) { status.textContent = label + ' 沒有內容'; return; }
+        codeMode.setAttribute('aria-pressed', 'false'); input.maxLength = 1000; input.placeholder = '聊聊資料庫吧…'; input.setAttribute('aria-label', '聊天訊息');
+        selectAttachment({type:'code', label, content:editor.getValue()});
+      }
+      document.getElementById('chat-schema').addEventListener('click', () => attachEditor(schemaEditor, 'Schema SQL'));
+      document.getElementById('chat-query').addEventListener('click', () => attachEditor(queryEditor, 'Query SQL'));
+      document.getElementById('chat-result').addEventListener('click', () => {
+        if (!lastChatResults || !lastChatResults.length) { status.textContent = '請先執行有欄位的查詢結果'; return; }
+        const tables = lastChatResults.map(query => ({columns:query.columns, rows:query.data.map(row => query.columns.map(col => {
+          const value = row[col]; return value === undefined ? null : value !== null && typeof value === 'object' ? JSON.stringify(value) : value;
+        }))}));
+        if (tables.length > 5 || tables.some(t => t.columns.length > 30 || t.rows.length > 200 || t.columns.some(c => c.length > 200) || t.rows.some(row => row.some(cell => typeof cell === 'string' && cell.length > 4000)))) { status.textContent = '結果過大，最多 5 張表、每張 200 列及 30 欄'; return; }
+        codeMode.setAttribute('aria-pressed', 'false'); input.maxLength = 1000; input.placeholder = '聊聊資料庫吧…'; input.setAttribute('aria-label', '聊天訊息');
+        selectAttachment({type:'table', label:'執行結果', tables});
+      });
+      document.getElementById('chat-dialog-close').addEventListener('click', () => dialog.close());
+      function showTables(attachment) {
+        dialogContent.replaceChildren();
+        attachment.tables.forEach((result, index) => {
+          if (attachment.tables.length > 1) { const title = document.createElement('h3'); title.textContent = '結果 ' + (index + 1); dialogContent.append(title); }
+          const table = document.createElement('table'), head = document.createElement('thead'), header = document.createElement('tr'), body = document.createElement('tbody');
+          result.columns.forEach(value => { const cell = document.createElement('th'); cell.textContent = value; header.append(cell); });
+          head.append(header);
+          result.rows.forEach(row => { const tr = document.createElement('tr'); row.forEach(value => { const cell = document.createElement('td'); cell.textContent = value === null ? 'NULL' : String(value); tr.append(cell); }); body.append(tr); });
+          table.append(head, body); dialogContent.append(table);
+        });
+        dialog.showModal();
+      }
       async function visitor() {
         if (!window.dbPlaygroundVisitor) throw new Error('瀏覽器不支援匿名識別');
         return await window.dbPlaygroundVisitor;
@@ -1399,6 +1465,7 @@
           const response = await fetch('/api/chat', {headers: {'X-Visitor-ID': await visitor()}, signal: AbortSignal.timeout(60000)});
           if (!response.ok) throw new Error('聊天室暫時無法使用');
           const data = await response.json();
+          const messageKey = JSON.stringify(data.messages);
           const nearBottom = list.scrollHeight - list.scrollTop - list.clientHeight < 60;
           const fragment = document.createDocumentFragment();
           for (const message of data.messages) {
@@ -1406,12 +1473,18 @@
             const meta = document.createElement('div'); meta.className = 'chat-meta';
             const name = document.createElement('strong'); name.textContent = message.name;
             const time = document.createElement('time'); time.textContent = new Date(message.created_at * 1000).toLocaleString('zh-TW', {month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit'});
-            const body = document.createElement('div'); body.className = 'chat-body'; body.textContent = message.body;
-            meta.append(name, time); item.append(meta, body); fragment.append(item);
+            const body = document.createElement('div'); body.className = message.attachment && message.body === '分享' + message.attachment.label ? 'chat-share-label' : 'chat-body'; body.textContent = message.body;
+            meta.append(name, time); item.append(meta, body);
+            if (message.attachment && message.attachment.type === 'code') { const code = document.createElement('pre'); code.className = 'chat-code'; code.textContent = message.attachment.content; item.append(code); }
+            if (message.attachment && message.attachment.type === 'table') { const open = document.createElement('button'); open.type = 'button'; open.className = 'chat-table-button'; open.textContent = '查看 ' + message.attachment.label; open.addEventListener('click', () => showTables(message.attachment)); item.append(open); }
+            fragment.append(item);
           }
           if (!data.messages.length) { const empty = document.createElement('div'); empty.className = 'chat-empty'; empty.textContent = '還沒有訊息，來聊聊資料庫吧。'; fragment.append(empty); }
-          list.replaceChildren(fragment);
-          if (nearBottom) list.scrollTop = list.scrollHeight;
+          if (messageKey !== lastMessages) {
+            list.replaceChildren(fragment);
+            lastMessages = messageKey;
+            if (nearBottom) list.scrollTop = list.scrollHeight;
+          }
           status.textContent = '你的名稱：' + data.name;
           named = true; form.inert = false; overlay.hidden = true;
         } catch (_) {
@@ -1430,13 +1503,17 @@
       document.addEventListener('visibilitychange', () => { if (!document.hidden) refresh(); });
       form.addEventListener('submit', async (event) => {
         event.preventDefault();
-        if (!input.value.trim()) return;
+        const isCode = codeMode.getAttribute('aria-pressed') === 'true';
+        let sendingAttachment = isCode && input.value.trim() ? {type:'code', label:'程式碼', content:input.value} : attachment;
+        const messageText = isCode ? (sendingAttachment ? '分享程式碼' : '') : (input.value.trim() || (sendingAttachment ? '分享' + sendingAttachment.label : ''));
+        if (!messageText) return;
+        if (sendingAttachment && new TextEncoder().encode(JSON.stringify(sendingAttachment)).length > 32768) { status.textContent = '附件超過 32 KB，請縮小內容'; return; }
         button.disabled = true;
         try {
-          const response = await fetch('/api/chat', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({visitor_id:await visitor(), text:input.value}), signal:AbortSignal.timeout(10000)});
+          const response = await fetch('/api/chat', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({visitor_id:await visitor(), text:messageText, attachment:sendingAttachment}), signal:AbortSignal.timeout(10000)});
           const data = await response.json();
           if (!response.ok) throw new Error(data.detail || '發送失敗');
-          input.value = ''; await refresh(); list.scrollTop = list.scrollHeight;
+          input.value = ''; selectAttachment(null); await refresh(); list.scrollTop = list.scrollHeight;
         } catch (error) { status.textContent = error.message || '發送失敗，請稍後再試'; }
         finally { button.disabled = false; }
       });
@@ -1838,6 +1915,7 @@
   }
 
   let originalResult = "";
+  let lastChatResults = null;
   function executeQuery() {
     const runButton = document.getElementById("runButton");
     const buttonText = document.getElementById("buttonText");
@@ -1868,6 +1946,7 @@
       return;
     }
 
+    lastChatResults = null;
     // 顯示加載器，隱藏文字
     buttonText.style.display = "none";
     loader.style.display = "inline-block";
@@ -1910,6 +1989,7 @@
         // 處理響應數據
         let htmlContent = "";
         if (status === "success" && typeof data === "object") {
+          lastChatResults = (data.queries || []).filter(query => Array.isArray(query.columns) && query.columns.length && Array.isArray(query.data));
           // 解析JSON數據並生成HTML
           if (data.schema_executed) {
             htmlContent += '<h5>Schema executed successfully!</h5><br>';
@@ -1948,7 +2028,7 @@
               ? "table-expanded-icon"
               : "table-collapsed-icon";
           }
-          var tables = document.querySelectorAll("table");
+          var tables = resultWindow.querySelectorAll("table");
           tables.forEach(function (table) {
             // 在外層包裹一個容器
             var container = document.createElement("div");

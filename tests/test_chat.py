@@ -70,7 +70,7 @@ class ChatStoreTests(unittest.TestCase):
         data = self.store.read(('browser', 'one'), '', '')
         self.assertEqual(data['messages'][0]['body'], '舊訊息')
         with closing(sqlite3.connect(self.path)) as db:
-            self.assertEqual(db.execute('PRAGMA user_version').fetchone()[0], 2)
+            self.assertEqual(db.execute('PRAGMA user_version').fetchone()[0], 3)
             self.assertEqual(db.execute("SELECT value FROM chat_settings WHERE key = 'name_key'").fetchone()[0], b'x' * 32)
 
     def test_concurrent_stores_reserve_only_one_name_per_identity(self):

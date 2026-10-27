@@ -44,3 +44,10 @@ class ChatApiTests(unittest.TestCase):
         second = self.client.get('/api/chat', headers={'X-Visitor-ID': str(uuid4())}).json()['name']
         self.assertEqual(first, second)
         self.assertNotIn('same-member', first)
+
+    def test_attachment_post_and_read(self):
+        attachment = {'type':'code', 'label':'Query SQL', 'content':'SELECT\n  1;'}
+        response = self.client.post('/api/chat', headers={'Origin':'http://testserver'}, json={'visitor_id':self.visitor, 'text':'分享 Query', 'attachment':attachment})
+        self.assertEqual(response.status_code, 201)
+        result = self.client.get('/api/chat', headers={'X-Visitor-ID':self.visitor}).json()
+        self.assertEqual(result['messages'][0]['attachment'], attachment)
