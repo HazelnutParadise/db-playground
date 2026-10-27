@@ -1434,7 +1434,7 @@
     </section>
     <button class="chat-toggle" id="chat-toggle" type="button" aria-expanded="false" aria-controls="chat-panel">💬 聊天室</button>
   </div>
-  <dialog class="chat-dialog" id="channel-dialog" aria-labelledby="channel-title"><form class="channel-form" id="channel-form"><h2 id="channel-title">建立私人頻道</h2><label id="channel-name-label">頻道名稱<input id="channel-name" maxlength="50" required></label><label id="channel-code-label" hidden>配對碼<input id="channel-code" maxlength="32" autocomplete="off"></label><label>你的頻道暱稱<input id="channel-nickname" maxlength="24" required></label><small id="channel-help">配對碼可讓其他人加入，請只分享給信任的人。更換瀏覽器或清除資料後需重新加入。</small><span id="channel-error" class="channel-error" aria-live="polite"></span><div class="channel-form-actions"><button type="button" class="chat-tool" id="channel-cancel">取消</button><button type="submit" class="chat-send" id="channel-submit">建立頻道</button></div></form></dialog>
+  <dialog class="chat-dialog" id="channel-dialog" aria-labelledby="channel-title"><form class="channel-form" id="channel-form"><h2 id="channel-title">建立私人頻道</h2><label id="channel-name-label">頻道名稱<input id="channel-name" maxlength="50" required></label><label id="channel-code-label" hidden>配對碼<input id="channel-code" maxlength="32" autocomplete="off"></label><label>你的頻道暱稱<input id="channel-nickname" maxlength="24" required></label><small id="channel-help">新配對碼為六位數字，有效 10 分鐘。請只分享給信任的人；建立者須保留此瀏覽器，才能重新產生配對碼。</small><span id="channel-error" class="channel-error" aria-live="polite"></span><div class="channel-form-actions"><button type="button" class="chat-tool" id="channel-cancel">取消</button><button type="submit" class="chat-send" id="channel-submit">建立頻道</button></div></form></dialog>
   <dialog class="chat-dialog" id="channel-leave-dialog" aria-labelledby="channel-leave-title"><div class="channel-form"><h2 id="channel-leave-title">退出頻道</h2><p id="channel-leave-message"></p><div class="channel-form-actions"><button type="button" class="chat-tool" id="channel-leave-cancel">取消</button><button type="button" class="chat-tool chat-tool-danger" id="channel-leave-confirm">退出頻道</button></div></div></dialog>
   <dialog class="chat-dialog" id="chat-dialog" aria-labelledby="chat-dialog-title"><div class="chat-dialog-header"><h2 id="chat-dialog-title">執行結果</h2><button type="button" class="chat-tool" id="chat-dialog-close">關閉</button></div><div class="chat-dialog-content" id="chat-dialog-content"></div></dialog>
   <script>
@@ -1455,6 +1455,7 @@
       menuToggle.addEventListener('click', () => { channelMenu.hidden = !channelMenu.hidden; menuToggle.setAttribute('aria-expanded', String(!channelMenu.hidden)); });
       let timer, loading = false, named = false, attachment = null, lastMessages = null, currentChannel = '', channelVersion = 0, channels = [], channelMode = 'create';
       const drafts = new Map();
+      let inviteTimer;
       async function loadChannels(selected = currentChannel) {
         const response = await fetch('/api/private-channels', {signal:AbortSignal.timeout(10000)});
         if (!response.ok) throw new Error('無法讀取頻道');
@@ -1477,13 +1478,34 @@
         const channel = channels.find(item => item.id === value);
         manage.hidden = !channel;
         invite.hidden = !channel || !channel.code;
-        invite.replaceChildren();
-        if (channel && channel.code) {
-          const text = document.createElement('span'); text.textContent = '配對碼：' + channel.code + ' ';
-          const copy = document.createElement('button'); copy.type = 'button'; copy.className = 'chat-tool'; copy.textContent = '複製';
-          copy.addEventListener('click', async () => { try { await navigator.clipboard.writeText(channel.code); copy.textContent = '已複製'; } catch (_) { copy.textContent = '請手動複製'; } });
-          invite.append(text, copy);
+        clearTimeout(inviteTimer);
+        function renderInvite() {
+          invite.replaceChildren();
+          if (!channel || !channel.code) return;
+          const expired = channel.code_expires_at != null && Date.now() >= channel.code_expires_at * 1000;
+          const text = document.createElement('span');
+          text.textContent = '配對碼：' + channel.code + (expired ? '（已過期） ' : channel.code_expires_at != null ? '（有效至 ' + new Date(channel.code_expires_at * 1000).toLocaleTimeString('zh-TW', {hour:'2-digit', minute:'2-digit'}) + '） ' : ' ');
+          invite.append(text);
+          if (!expired) {
+            const copy = document.createElement('button'); copy.type = 'button'; copy.className = 'chat-tool'; copy.textContent = '複製';
+            copy.addEventListener('click', async () => { try { await navigator.clipboard.writeText(channel.code); copy.textContent = '已複製'; } catch (_) { copy.textContent = '請手動複製'; } });
+            invite.append(copy);
+            if (channel.code_expires_at != null) inviteTimer = setTimeout(renderInvite, Math.max(0, channel.code_expires_at * 1000 - Date.now()));
+          } else {
+            const renew = document.createElement('button'); renew.type = 'button'; renew.className = 'chat-tool'; renew.textContent = '重新產生';
+            renew.addEventListener('click', async () => {
+              renew.disabled = true;
+              try {
+                const response = await fetch('/api/private-channels/' + encodeURIComponent(channel.id) + '/code', {method:'POST', signal:AbortSignal.timeout(10000)});
+                const result = await response.json(); if (!response.ok) throw new Error(result.detail || '無法產生配對碼');
+                channel.code = result.code; channel.code_expires_at = result.code_expires_at;
+                if (currentChannel === channel.id) renderInvite();
+              } catch (error) { renew.disabled = false; renew.textContent = '產生失敗，重試'; }
+            });
+            invite.append(renew);
+          }
         }
+        renderInvite();
         if (value || named) overlay.hidden = true;
         else { overlay.hidden = false; retry.hidden = true; overlay.querySelector('.chat-spinner').hidden = false; loadingText.textContent = '正在為你取一個資料庫暱稱…'; }
         form.inert = true; list.replaceChildren(); refresh();
@@ -1496,7 +1518,7 @@
         document.getElementById('channel-submit').textContent = creating ? '建立頻道' : joining ? '加入頻道' : '儲存';
         document.getElementById('channel-name-label').hidden = !creating; channelName.required = creating;
         document.getElementById('channel-code-label').hidden = !joining; channelCode.required = joining;
-        document.getElementById('channel-help').textContent = renaming ? '新暱稱會用於之後的訊息。' : '配對碼可讓其他人加入，請只分享給信任的人。更換瀏覽器或清除資料後需重新加入。';
+        document.getElementById('channel-help').textContent = renaming ? '新暱稱會用於之後的訊息。' : '新配對碼為六位數字，有效 10 分鐘。請只分享給信任的人；建立者須保留此瀏覽器，才能重新產生配對碼。';
         if (renaming) channelNickname.value = channels.find(item => item.id === currentChannel)?.nickname || '';
         channelDialog.showModal();
       }

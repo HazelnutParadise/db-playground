@@ -12,7 +12,11 @@ services:
       LOGTO_SESSION_SECRET: ${LOGTO_SESSION_SECRET:-}
       LOGTO_REDIRECT_URI: ${LOGTO_REDIRECT_URI:-}
     volumes:
-      - chat_data:/data
+      - type: bind
+        source: ${CHAT_DATA_DIR:?必須設定 CHAT_DATA_DIR}
+        target: /data
+        bind:
+          create_host_path: false
     ports:
       - "127.0.0.1:4998:5000"
     networks:
@@ -282,6 +286,3 @@ networks:
     driver: bridge
   infra-net:
     external: true
-
-volumes:
-  chat_data:

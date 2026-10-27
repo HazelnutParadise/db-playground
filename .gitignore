@@ -7,3 +7,5 @@
 /backend/data/
 
 .env
+
+/data/chat/

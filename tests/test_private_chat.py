@@ -1,6 +1,7 @@
 import tempfile
 import time
 import unittest
+from unittest.mock import patch
 from pathlib import Path
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
@@ -120,3 +121,53 @@ class PrivateChatTests(unittest.TestCase):
         self.assertEqual(self.owner.patch(url+'/nickname', headers={'Origin':'https://evil.test'}, json={'nickname':'乙'}).status_code, 403)
         self.assertEqual(self.owner.delete(url+'/membership', headers={'Origin':'https://evil.test'}).status_code, 403)
         self.assertEqual(self.owner.get(url+'/messages').json()['name'], '甲')
+
+    def test_six_digit_code_expires_and_owner_can_regenerate(self):
+        with patch('internal.private_chat_api.secrets.randbelow', side_effect=[123, 456]):
+            with patch('internal.private_chat_api.time.time', return_value=1_800_000_000):
+                room = self.owner.post('/api/private-channels', headers=self.origin, json={'name':'群組','nickname':'甲'}).json()
+                self.assertEqual(room['code'], '000123')
+                self.assertEqual(room['code_expires_at'], 1_800_000_600)
+                self.assertEqual(self.other.post(f"/api/private-channels/{room['id']}/code", headers=self.origin).status_code, 404)
+            with patch('internal.private_chat_api.time.time', return_value=1_800_000_600):
+                self.assertEqual(self.guest.post('/api/private-channels/join', headers=self.origin, json={'code':room['code'],'nickname':'乙'}).status_code, 404)
+                updated = self.owner.post(f"/api/private-channels/{room['id']}/code", headers=self.origin).json()
+                self.assertEqual(updated['code'], '000456')
+                self.assertEqual(self.guest.post('/api/private-channels/join', headers=self.origin, json={'code':updated['code'],'nickname':'乙'}).status_code, 200)
+
+    def test_duplicate_code_retries_without_overwriting_existing_room(self):
+        with patch('internal.private_chat_api.secrets.randbelow', side_effect=[12, 12, 34]):
+            first = self.owner.post('/api/private-channels', headers=self.origin, json={'name':'一','nickname':'甲'}).json()
+            second = self.other.post('/api/private-channels', headers=self.origin, json={'name':'二','nickname':'乙'}).json()
+        self.assertEqual(first['code'], '000012')
+        self.assertEqual(second['code'], '000034')
+        self.assertEqual(self.guest.post('/api/private-channels/join', headers=self.origin, json={'code':first['code'],'nickname':'丙'}).json()['id'], first['id'])
+
+    def test_expired_code_allows_only_original_owner_to_rejoin(self):
+        with patch('internal.private_chat_api.time.time', return_value=1_800_000_000):
+            room = self.owner.post('/api/private-channels', headers=self.origin, json={'name':'群組','nickname':'甲'}).json()
+            self.assertEqual(self.owner.delete(f"/api/private-channels/{room['id']}/membership", headers=self.origin).status_code, 204)
+        with patch('internal.private_chat_api.time.time', return_value=1_800_000_601):
+            self.assertEqual(self.guest.post('/api/private-channels/join', headers=self.origin, json={'code':room['code'],'nickname':'乙'}).status_code, 404)
+            self.assertEqual(self.owner.post('/api/private-channels/join', headers=self.origin, json={'code':room['code'],'nickname':'甲'}).status_code, 200)
+
+    def test_legacy_long_code_remains_valid(self):
+        from internal.private_chat_api import crypto, code_hash
+        room = self.owner.post('/api/private-channels', headers=self.origin, json={'name':'舊群','nickname':'甲'}).json()
+        legacy = 'ABCDEF1234567890'
+        store = self.owner.app.state.chat
+        with store._connect() as db:
+            cipher, key = crypto(db)
+            db.execute('UPDATE private_channels SET code_hash=?, code_encrypted=?, code_expires_at=NULL WHERE id=?', (code_hash(key, legacy), cipher.encrypt(legacy.encode()), room['id']))
+        result = self.guest.post('/api/private-channels/join', headers=self.origin, json={'code':legacy,'nickname':'乙'})
+        self.assertEqual(result.status_code, 200)
+        self.assertEqual(result.json()['id'], room['id'])
+
+    def test_global_limit_caps_distributed_failures(self):
+        app = self.owner.app
+        for i in range(30):
+            client = TestClient(app, client=(f'192.0.2.{i+1}', 5000))
+            response = client.post('/api/private-channels/join', headers=self.origin, json={'code':'wrong','nickname':'甲'})
+            self.assertEqual(response.status_code, 404)
+        client = TestClient(app, client=('198.51.100.1', 5000))
+        self.assertEqual(client.post('/api/private-channels/join', headers=self.origin, json={'code':'wrong','nickname':'甲'}).status_code, 429)

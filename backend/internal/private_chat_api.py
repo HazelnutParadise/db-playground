@@ -18,6 +18,8 @@ from internal.chat_attachments import serialize_attachment
 
 private_router = APIRouter(prefix='/api/private-channels')
 _COOKIE = 'db_private_session'
+_CODE_LIFETIME = 600
+_GLOBAL_FAILURE_KEY = hashlib.sha256(b'private-code-global-failures').digest()
 
 
 def origin_check(request):
@@ -50,6 +52,14 @@ def crypto(conn):
 
 def code_hash(key, code):
     return hmac.new(key, code.encode(), hashlib.sha256).digest()
+
+
+def fresh_code(conn, key):
+    for _ in range(50):
+        code = f'{secrets.randbelow(1_000_000):06d}'
+        if not conn.execute('SELECT 1 FROM private_channels WHERE code_hash=?', (code_hash(key, code),)).fetchone():
+            return code
+    raise HTTPException(503, '暫時無法產生配對碼，請稍後再試')
 
 
 def check_member(conn, channel_id, person):
@@ -99,12 +109,13 @@ def list_channels(request: Request, response: Response):
     store = request.app.state.chat
     with store._lock, store._connect() as conn:
         cipher, _ = crypto(conn)
-        rows = conn.execute('SELECT c.id,c.name,c.code_encrypted,c.owner_hash,m.nickname FROM private_channels c JOIN private_members m ON c.id=m.channel_id WHERE m.identity_hash=? AND m.deleted_at IS NULL AND c.deleted_at IS NULL ORDER BY c.created_at', (person,)).fetchall()
+        rows = conn.execute('SELECT c.id,c.name,c.code_encrypted,c.code_expires_at,c.owner_hash,m.nickname FROM private_channels c JOIN private_members m ON c.id=m.channel_id WHERE m.identity_hash=? AND m.deleted_at IS NULL AND c.deleted_at IS NULL ORDER BY c.created_at', (person,)).fetchall()
         channels = []
         for row in rows:
             channel = {'id':row['id'], 'name':row['name'], 'nickname':row['nickname']}
             if hmac.compare_digest(row['owner_hash'], person):
                 channel['code'] = cipher.decrypt(row['code_encrypted']).decode()
+                channel['code_expires_at'] = row['code_expires_at']
             channels.append(channel)
         audit(conn, request, 200, 'private', time.time())
     response.headers['Cache-Control'] = 'no-store'
@@ -118,16 +129,18 @@ def create_channel(data: CreateChannel, request: Request, response: Response):
     nickname = clean_label(data.nickname, 24)
     person = identity(request, response)
     now = time.time()
-    channel_id, code = secrets.token_urlsafe(18), secrets.token_hex(8).upper()
+    channel_id = secrets.token_urlsafe(18)
     store = request.app.state.chat
     with store._lock, store._connect() as conn:
         limit_attempt(conn, request, person, now)
         cipher, key = crypto(conn)
-        conn.execute('INSERT INTO private_channels(id,name,code_hash,code_encrypted,owner_hash,created_at,updated_at) VALUES (?,?,?,?,?,?,?)', (channel_id, name, code_hash(key,code), cipher.encrypt(code.encode()), person, now, now))
+        code = fresh_code(conn, key)
+        expires = now + _CODE_LIFETIME
+        conn.execute('INSERT INTO private_channels(id,name,code_hash,code_encrypted,owner_hash,created_at,updated_at,code_expires_at) VALUES (?,?,?,?,?,?,?,?)', (channel_id, name, code_hash(key,code), cipher.encrypt(code.encode()), person, now, now, expires))
         conn.execute('INSERT INTO private_members(channel_id,identity_hash,nickname,nickname_key,created_at,updated_at) VALUES (?,?,?,?,?,?)', (channel_id, person, nickname, nickname.casefold(), now, now))
         audit(conn, request, 201, 'private', now)
     response.headers['Cache-Control'] = 'no-store'
-    return {'id':channel_id, 'name':name, 'nickname':nickname, 'code':code}
+    return {'id':channel_id, 'name':name, 'nickname':nickname, 'code':code, 'code_expires_at':expires}
 
 
 @private_router.post('/join')
@@ -140,9 +153,14 @@ def join_channel(data: JoinChannel, request: Request, response: Response):
     store = request.app.state.chat
     with store._lock, store._connect() as conn:
         limit_attempt(conn, request, person, now)
+        if conn.execute('SELECT COUNT(*) FROM private_attempts WHERE identity_hash=?', (_GLOBAL_FAILURE_KEY,)).fetchone()[0] >= 30:
+            audit(conn, request, 429, 'private', now)
+            conn.commit()
+            raise HTTPException(429, '嘗試次數過多，請稍後再試')
         _, key = crypto(conn)
-        row = conn.execute('SELECT id,name FROM private_channels WHERE code_hash=? AND deleted_at IS NULL', (code_hash(key,code),)).fetchone()
-        if not row:
+        row = conn.execute('SELECT id,name,owner_hash,code_expires_at FROM private_channels WHERE code_hash=? AND deleted_at IS NULL', (code_hash(key,code),)).fetchone()
+        if not row or (row['code_expires_at'] is not None and row['code_expires_at'] <= now and not hmac.compare_digest(row['owner_hash'], person)):
+            conn.execute('INSERT INTO private_attempts(identity_hash,created_at) VALUES (?,?)', (_GLOBAL_FAILURE_KEY, now))
             audit(conn, request, 404, 'private', now)
             conn.commit()
             raise HTTPException(404, '配對碼無效')
@@ -236,3 +254,24 @@ def leave_channel(channel_id: str, request: Request, response: Response):
         conn.execute("UPDATE private_members SET nickname_key=char(0) || id, deleted_at=?, updated_at=? WHERE channel_id=? AND identity_hash=? AND deleted_at IS NULL", (now, now, channel_id, person))
         audit(conn, request, 204, 'private', now)
     return Response(status_code=204, headers={'Cache-Control': 'no-store'})
+
+
+@private_router.post('/{channel_id}/code')
+def regenerate_code(channel_id: str, request: Request, response: Response):
+    origin_check(request)
+    person = identity(request, response)
+    now = time.time()
+    store = request.app.state.chat
+    with store._lock, store._connect() as conn:
+        check_member(conn, channel_id, person)
+        row = conn.execute('SELECT owner_hash FROM private_channels WHERE id=? AND deleted_at IS NULL', (channel_id,)).fetchone()
+        if not row or not hmac.compare_digest(row['owner_hash'], person):
+            raise HTTPException(404, '找不到頻道')
+        limit_attempt(conn, request, person, now)
+        cipher, key = crypto(conn)
+        code = fresh_code(conn, key)
+        expires = now + _CODE_LIFETIME
+        conn.execute('UPDATE private_channels SET code_hash=?, code_encrypted=?, code_expires_at=?, updated_at=? WHERE id=?', (code_hash(key,code), cipher.encrypt(code.encode()), expires, now, channel_id))
+        audit(conn, request, 200, 'private', now)
+    response.headers['Cache-Control'] = 'no-store'
+    return {'code':code, 'code_expires_at':expires}
