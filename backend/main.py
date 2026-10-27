@@ -9,6 +9,7 @@ from fastapi.responses import HTMLResponse
 from internal.api import api_router
 from internal.auth import auth_router
 from internal.chat_api import chat_router, chat_lifespan
+from internal.private_chat_api import private_router
 
 app = FastAPI(docs_url=None, redoc_url=None, lifespan=chat_lifespan)
 app.state.logto = None
@@ -40,6 +41,7 @@ if any(settings.values()):
 app.include_router(api_router)
 app.include_router(auth_router)
 app.include_router(chat_router)
+app.include_router(private_router)
 
 
 @app.get('/')

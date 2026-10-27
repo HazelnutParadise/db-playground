@@ -784,13 +784,23 @@
     .chat-panel[hidden] { display: none; }
     .chat-panel:not([hidden]) { animation: chat-open .24s cubic-bezier(.2,.8,.2,1) both; transform-origin: bottom right; }
     @keyframes chat-open { from { opacity: 0; transform: translateY(12px) scale(.97); } to { opacity: 1; transform: translateY(0) scale(1); } }
-    .chat-loading { position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; gap: 12px; background: var(--pannel-background-color); border-radius: 18px; z-index: 1; font-size: .88rem; }
+    .chat-loading { position: absolute; inset: 104px 0 0; display: grid; place-content: center; justify-items: center; gap: 12px; background: var(--pannel-background-color); border-radius: 18px; z-index: 1; font-size: .88rem; }
     .chat-loading[hidden] { display: none; }
     .chat-spinner { width: 34px; height: 34px; border: 3px solid #12816144; border-top-color: #128161; border-radius: 50%; animation: chat-spin .8s linear infinite; }
     @keyframes chat-spin { to { transform: rotate(360deg); } }
     @media (prefers-reduced-motion: reduce) { .chat-panel:not([hidden]), .chat-spinner { animation: none; } }
     .chat-header { padding: 17px 19px 12px; border-bottom: 1px solid #8884; }
     .chat-header strong { display: block; font-size: 1.05rem; }
+    .chat-channel-bar { display: flex; gap: 5px; margin-top: 9px; }
+    .chat-channel-bar select { min-width: 0; flex: 1; border: 1px solid #8887; border-radius: 8px; background: var(--pannel-background-color); color: var(--text-color); font-size: .78rem; }
+    .chat-invite { margin-top: 6px; font-size: .73rem; overflow-wrap: anywhere; }
+    .channel-form { display: grid; gap: 12px; }
+    .channel-form [hidden] { display: none; }
+    #channel-dialog { width: min(430px, calc(100vw - 32px)); }
+    .channel-form label { display: grid; gap: 5px; }
+    .channel-form input { padding: 8px; border: 1px solid #8887; border-radius: 8px; background: var(--pannel-background-color); color: var(--text-color); }
+    .channel-form-actions { display: flex; gap: 8px; justify-content: flex-end; }
+    .channel-error { color: #b94a48; font-size: .84rem; }
     .chat-header small, .chat-meta, .chat-status { color: var(--text-color); opacity: .7; font-size: .76rem; }
     .chat-messages { flex: 1; min-height: 0; overflow-y: auto; padding: 15px 18px; }
     .chat-empty { text-align: center; padding: 48px 4px; opacity: .65; font-size: .86rem; }
@@ -1388,7 +1398,7 @@
   <div class="chat-widget" lang="zh-Hant-TW">
     <section class="chat-panel" id="chat-panel" aria-label="資料庫聊天室" hidden>
       <div class="chat-loading" id="chat-loading" role="status"><span class="chat-spinner" aria-hidden="true"></span><span id="chat-loading-text">正在為你取一個資料庫暱稱…</span><button type="button" id="chat-retry" class="chat-send" hidden>再試一次</button></div>
-      <div class="chat-header"><strong>資料庫聊天室</strong><small>一起討論資料庫 · 訊息保留 7 天</small></div>
+      <div class="chat-header"><strong>資料庫聊天室</strong><small>一起討論資料庫 · 訊息保留 7 天</small><div class="chat-channel-bar"><select id="chat-channel" aria-label="聊天頻道"><option value="">公開聊天室</option></select><button type="button" class="chat-tool" id="channel-create">建立</button><button type="button" class="chat-tool" id="channel-join">加入</button></div><div class="chat-invite" id="channel-invite" hidden></div></div>
       <div class="chat-messages" id="chat-messages" aria-live="polite"><div class="chat-empty">正在載入訊息…</div></div>
       <form class="chat-compose" id="chat-form" inert>
         <div class="chat-tools"><button type="button" class="chat-tool" id="chat-code-mode" aria-pressed="false">貼程式碼</button><button type="button" class="chat-tool" id="chat-schema">帶入 Schema</button><button type="button" class="chat-tool" id="chat-query">帶入 Query</button><button type="button" class="chat-tool" id="chat-result">帶入執行結果</button></div>
@@ -1399,6 +1409,7 @@
     </section>
     <button class="chat-toggle" id="chat-toggle" type="button" aria-expanded="false" aria-controls="chat-panel">💬 聊天室</button>
   </div>
+  <dialog class="chat-dialog" id="channel-dialog" aria-labelledby="channel-title"><form class="channel-form" id="channel-form"><h2 id="channel-title">建立私人頻道</h2><label id="channel-name-label">頻道名稱<input id="channel-name" maxlength="50" required></label><label id="channel-code-label" hidden>配對碼<input id="channel-code" maxlength="32" autocomplete="off"></label><label>你的頻道暱稱<input id="channel-nickname" maxlength="24" required></label><small>配對碼可讓其他人加入，請只分享給信任的人。更換瀏覽器或清除資料後需重新加入。</small><span id="channel-error" class="channel-error" aria-live="polite"></span><div class="channel-form-actions"><button type="button" class="chat-tool" id="channel-cancel">取消</button><button type="submit" class="chat-send" id="channel-submit">建立頻道</button></div></form></dialog>
   <dialog class="chat-dialog" id="chat-dialog" aria-labelledby="chat-dialog-title"><div class="chat-dialog-header"><h2 id="chat-dialog-title">執行結果</h2><button type="button" class="chat-tool" id="chat-dialog-close">關閉</button></div><div class="chat-dialog-content" id="chat-dialog-content"></div></dialog>
   <script>
     (() => {
@@ -1410,7 +1421,57 @@
       const retry = document.getElementById('chat-retry');
       const codeMode = document.getElementById('chat-code-mode'), preview = document.getElementById('chat-preview');
       const dialog = document.getElementById('chat-dialog'), dialogContent = document.getElementById('chat-dialog-content');
-      let timer, loading = false, named = false, attachment = null, lastMessages = null;
+      const channelSelect = document.getElementById('chat-channel'), invite = document.getElementById('channel-invite');
+      const channelDialog = document.getElementById('channel-dialog'), channelForm = document.getElementById('channel-form');
+      const channelName = document.getElementById('channel-name'), channelCode = document.getElementById('channel-code'), channelNickname = document.getElementById('channel-nickname');
+      const channelError = document.getElementById('channel-error');
+      let timer, loading = false, named = false, attachment = null, lastMessages = null, currentChannel = '', channelVersion = 0, channels = [], channelMode = 'create';
+      async function loadChannels(selected = currentChannel) {
+        const response = await fetch('/api/private-channels', {signal:AbortSignal.timeout(10000)});
+        if (!response.ok) throw new Error('無法讀取頻道');
+        channels = (await response.json()).channels;
+        const options = [new Option('公開聊天室', '')];
+        channels.forEach(channel => options.push(new Option(channel.name, channel.id)));
+        channelSelect.replaceChildren(...options); channelSelect.value = selected;
+      }
+      function selectChannel(value) {
+        currentChannel = value; channelVersion++; loading = false; lastMessages = null;
+        const channel = channels.find(item => item.id === value);
+        invite.hidden = !channel || !channel.code;
+        invite.replaceChildren();
+        if (channel && channel.code) {
+          const text = document.createElement('span'); text.textContent = '配對碼：' + channel.code + ' ';
+          const copy = document.createElement('button'); copy.type = 'button'; copy.className = 'chat-tool'; copy.textContent = '複製';
+          copy.addEventListener('click', async () => { try { await navigator.clipboard.writeText(channel.code); copy.textContent = '已複製'; } catch (_) { copy.textContent = '請手動複製'; } });
+          invite.append(text, copy);
+        }
+        if (value || named) overlay.hidden = true;
+        else { overlay.hidden = false; retry.hidden = true; overlay.querySelector('.chat-spinner').hidden = false; loadingText.textContent = '正在為你取一個資料庫暱稱…'; }
+        form.inert = true; list.replaceChildren(); refresh();
+      }
+      channelSelect.addEventListener('change', () => selectChannel(channelSelect.value));
+      function openChannelDialog(mode) {
+        channelMode = mode; channelForm.reset(); channelError.textContent = '';
+        const creating = mode === 'create';
+        document.getElementById('channel-title').textContent = creating ? '建立私人頻道' : '加入私人頻道';
+        document.getElementById('channel-submit').textContent = creating ? '建立頻道' : '加入頻道';
+        document.getElementById('channel-name-label').hidden = !creating; channelName.required = creating;
+        document.getElementById('channel-code-label').hidden = creating; channelCode.required = !creating;
+        channelDialog.showModal();
+      }
+      document.getElementById('channel-create').addEventListener('click', () => openChannelDialog('create'));
+      document.getElementById('channel-join').addEventListener('click', () => openChannelDialog('join'));
+      document.getElementById('channel-cancel').addEventListener('click', () => channelDialog.close());
+      channelForm.addEventListener('submit', async event => {
+        event.preventDefault(); const submit = document.getElementById('channel-submit'); submit.disabled = true; channelError.textContent = '';
+        try {
+          const creating = channelMode === 'create';
+          const response = await fetch(creating ? '/api/private-channels' : '/api/private-channels/join', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(creating ? {name:channelName.value, nickname:channelNickname.value} : {code:channelCode.value, nickname:channelNickname.value}), signal:AbortSignal.timeout(10000)});
+          const result = await response.json(); if (!response.ok) throw new Error(result.detail || '操作失敗');
+          await loadChannels(result.id); channelDialog.close(); selectChannel(result.id);
+        } catch (error) { channelError.textContent = error.message || '操作失敗，請稍後再試'; }
+        finally { submit.disabled = false; }
+      });
       function selectAttachment(value) {
         if (value && new TextEncoder().encode(JSON.stringify(value)).length > 32768) { status.textContent = '附件超過 32 KB，請縮小內容'; return; }
         attachment = value; preview.hidden = !value;
@@ -1459,12 +1520,14 @@
         return await window.dbPlaygroundVisitor;
       }
       async function refresh() {
-        if (loading || panel.hidden || document.hidden || (!retry.hidden && !named)) return;
+        if (loading || panel.hidden || document.hidden || (!currentChannel && !retry.hidden && !named)) return;
         loading = true;
+        const target = currentChannel, version = channelVersion;
         try {
-          const response = await fetch('/api/chat', {headers: {'X-Visitor-ID': await visitor()}, signal: AbortSignal.timeout(60000)});
+          const response = target ? await fetch('/api/private-channels/' + encodeURIComponent(target) + '/messages', {signal: AbortSignal.timeout(10000)}) : await fetch('/api/chat', {headers: {'X-Visitor-ID': await visitor()}, signal: AbortSignal.timeout(60000)});
           if (!response.ok) throw new Error('聊天室暫時無法使用');
           const data = await response.json();
+          if (version !== channelVersion) return;
           const messageKey = JSON.stringify(data.messages);
           const nearBottom = list.scrollHeight - list.scrollTop - list.clientHeight < 60;
           const fragment = document.createDocumentFragment();
@@ -1485,19 +1548,20 @@
             lastMessages = messageKey;
             if (nearBottom) list.scrollTop = list.scrollHeight;
           }
-          status.textContent = '你的名稱：' + data.name;
-          named = true; form.inert = false; overlay.hidden = true;
+          status.textContent = (target ? '你的暱稱：' : '你的名稱：') + data.name;
+          if (!target) named = true; form.inert = false; overlay.hidden = true;
         } catch (_) {
-          if (!named) { loadingText.textContent = '暱稱暫時無法產生，請稍後再試'; retry.hidden = false; overlay.querySelector('.chat-spinner').hidden = true; }
+          if (version !== channelVersion) return;
+          if (!target && !named) { loadingText.textContent = '暱稱暫時無法產生，請稍後再試'; retry.hidden = false; overlay.querySelector('.chat-spinner').hidden = true; }
           else { status.textContent = '載入失敗，稍後會自動重試'; }
         }
-        finally { loading = false; }
+        finally { if (version === channelVersion) loading = false; }
       }
       retry.addEventListener('click', () => { retry.hidden = true; overlay.querySelector('.chat-spinner').hidden = false; loadingText.textContent = '正在為你取一個資料庫暱稱…'; refresh(); });
       toggle.addEventListener('click', () => {
         panel.hidden = !panel.hidden;
         toggle.setAttribute('aria-expanded', String(!panel.hidden));
-        if (!panel.hidden) { refresh(); timer = setInterval(refresh, 3000); }
+        if (!panel.hidden) { loadChannels().catch(() => { status.textContent = '無法讀取私人頻道'; }); refresh(); timer = setInterval(refresh, 3000); }
         else { clearInterval(timer); }
       });
       document.addEventListener('visibilitychange', () => { if (!document.hidden) refresh(); });
@@ -1509,11 +1573,14 @@
         if (!messageText) return;
         if (sendingAttachment && new TextEncoder().encode(JSON.stringify(sendingAttachment)).length > 32768) { status.textContent = '附件超過 32 KB，請縮小內容'; return; }
         button.disabled = true;
+        const target = currentChannel;
         try {
-          const response = await fetch('/api/chat', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({visitor_id:await visitor(), text:messageText, attachment:sendingAttachment}), signal:AbortSignal.timeout(10000)});
+          const payload = {text:messageText, attachment:sendingAttachment};
+          if (!target) payload.visitor_id = await visitor();
+          const response = await fetch(target ? '/api/private-channels/' + encodeURIComponent(target) + '/messages' : '/api/chat', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload), signal:AbortSignal.timeout(10000)});
           const data = await response.json();
           if (!response.ok) throw new Error(data.detail || '發送失敗');
-          input.value = ''; selectAttachment(null); await refresh(); list.scrollTop = list.scrollHeight;
+          input.value = ''; selectAttachment(null); if (target === currentChannel) { await refresh(); list.scrollTop = list.scrollHeight; }
         } catch (error) { status.textContent = error.message || '發送失敗，請稍後再試'; }
         finally { button.disabled = false; }
       });

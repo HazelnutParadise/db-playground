@@ -52,9 +52,10 @@ class ChatStore:
         conn = sqlite3.connect(self.path, timeout=5)
         conn.row_factory = sqlite3.Row
         conn.execute('PRAGMA secure_delete = ON')
+        conn.execute('PRAGMA foreign_keys = ON')
         if not self._ready:
             version = conn.execute('PRAGMA user_version').fetchone()[0]
-            if version > 3:
+            if version > 4:
                 conn.close()
                 raise RuntimeError('Unsupported chat database version')
             migration = Path(__file__).resolve().parent.parent / 'migrations' / '0001_chat.sql'
@@ -64,6 +65,9 @@ class ChatStore:
                 conn.executescript((migration.parent / '0002_chat_names.sql').read_text(encoding='utf-8'))
             if version < 3:
                 conn.executescript((migration.parent / '0003_chat_attachments.sql').read_text(encoding='utf-8'))
+            if version < 4:
+                conn.executescript((migration.parent / '0004_private_channels.sql').read_text(encoding='utf-8'))
+            conn.execute('PRAGMA foreign_keys = ON')
             conn.execute('INSERT OR IGNORE INTO chat_settings(key, value) VALUES (?, ?)',
                          ('name_key', secrets.token_bytes(32)))
             conn.commit()
@@ -158,5 +162,7 @@ class ChatStore:
         with self._lock, self._connect() as conn:
             cutoff = now - RETENTION_SECONDS
             conn.execute('DELETE FROM chat_messages WHERE created_at <= ?', (cutoff,))
+            conn.execute('DELETE FROM private_messages WHERE created_at <= ?', (cutoff,))
+            conn.execute('DELETE FROM private_attempts WHERE created_at <= ?', (now - 60,))
             conn.execute('DELETE FROM chat_audit_log WHERE created_at <= ?', (cutoff,))
             conn.execute('DELETE FROM chat_request_log WHERE created_at <= ?', (cutoff,))
