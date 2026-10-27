@@ -84,6 +84,10 @@ class JoinChannel(BaseModel):
     nickname: str
 
 
+class NicknameChange(BaseModel):
+    nickname: str
+
+
 class PrivateMessage(BaseModel):
     text: str
     attachment: dict | None = None
@@ -142,12 +146,15 @@ def join_channel(data: JoinChannel, request: Request, response: Response):
             audit(conn, request, 404, 'private', now)
             conn.commit()
             raise HTTPException(404, '配對碼無效')
-        old = conn.execute('SELECT nickname FROM private_members WHERE channel_id=? AND identity_hash=? AND deleted_at IS NULL', (row['id'],person)).fetchone()
-        if old:
+        old = conn.execute('SELECT nickname, deleted_at FROM private_members WHERE channel_id=? AND identity_hash=?', (row['id'],person)).fetchone()
+        if old and old['deleted_at'] is None:
             nickname = old['nickname']
         else:
             try:
-                conn.execute('INSERT INTO private_members(channel_id,identity_hash,nickname,nickname_key,created_at,updated_at) VALUES (?,?,?,?,?,?)', (row['id'], person, nickname, nickname.casefold(), now, now))
+                if old:
+                    conn.execute('UPDATE private_members SET nickname=?, nickname_key=?, deleted_at=NULL, updated_at=? WHERE channel_id=? AND identity_hash=?', (nickname, nickname.casefold(), now, row['id'], person))
+                else:
+                    conn.execute('INSERT INTO private_members(channel_id,identity_hash,nickname,nickname_key,created_at,updated_at) VALUES (?,?,?,?,?,?)', (row['id'], person, nickname, nickname.casefold(), now, now))
             except sqlite3.IntegrityError:
                 audit(conn, request, 409, 'private', now)
                 conn.commit()
@@ -195,3 +202,37 @@ def send_message(channel_id: str, data: PrivateMessage, request: Request, respon
         store._last_post[('private', person.hex())] = now
         audit(conn, request, 201, 'private', now)
     return {'id':cursor.lastrowid,'name':member['nickname'],'body':text,'created_at':now,'attachment':data.attachment}
+
+
+@private_router.patch('/{channel_id}/nickname')
+def change_nickname(channel_id: str, data: NicknameChange, request: Request, response: Response):
+    origin_check(request)
+    nickname = clean_label(data.nickname, 24)
+    person = identity(request, response)
+    now = time.time()
+    store = request.app.state.chat
+    with store._lock, store._connect() as conn:
+        check_member(conn, channel_id, person)
+        try:
+            conn.execute('UPDATE private_members SET nickname=?, nickname_key=?, updated_at=? WHERE channel_id=? AND identity_hash=? AND deleted_at IS NULL', (nickname, nickname.casefold(), now, channel_id, person))
+        except sqlite3.IntegrityError:
+            audit(conn, request, 409, 'private', now)
+            conn.commit()
+            raise HTTPException(409, '這個暱稱已被使用')
+        audit(conn, request, 200, 'private', now)
+    response.headers['Cache-Control'] = 'no-store'
+    return {'nickname': nickname}
+
+
+@private_router.delete('/{channel_id}/membership', status_code=204)
+def leave_channel(channel_id: str, request: Request, response: Response):
+    origin_check(request)
+    person = identity(request, response)
+    now = time.time()
+    store = request.app.state.chat
+    with store._lock, store._connect() as conn:
+        check_member(conn, channel_id, person)
+        # Reserve a prefix rejected by clean_label so the old nickname becomes available.
+        conn.execute("UPDATE private_members SET nickname_key=char(0) || id, deleted_at=?, updated_at=? WHERE channel_id=? AND identity_hash=? AND deleted_at IS NULL", (now, now, channel_id, person))
+        audit(conn, request, 204, 'private', now)
+    return Response(status_code=204, headers={'Cache-Control': 'no-store'})

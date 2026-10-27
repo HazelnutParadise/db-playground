@@ -55,7 +55,7 @@ class ChatStore:
         conn.execute('PRAGMA foreign_keys = ON')
         if not self._ready:
             version = conn.execute('PRAGMA user_version').fetchone()[0]
-            if version > 4:
+            if version > 5:
                 conn.close()
                 raise RuntimeError('Unsupported chat database version')
             migration = Path(__file__).resolve().parent.parent / 'migrations' / '0001_chat.sql'
@@ -67,6 +67,8 @@ class ChatStore:
                 conn.executescript((migration.parent / '0003_chat_attachments.sql').read_text(encoding='utf-8'))
             if version < 4:
                 conn.executescript((migration.parent / '0004_private_channels.sql').read_text(encoding='utf-8'))
+            if version < 5:
+                conn.executescript((migration.parent / '0005_private_member_updates.sql').read_text(encoding='utf-8'))
             conn.execute('PRAGMA foreign_keys = ON')
             conn.execute('INSERT OR IGNORE INTO chat_settings(key, value) VALUES (?, ?)',
                          ('name_key', secrets.token_bytes(32)))

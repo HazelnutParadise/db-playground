@@ -784,19 +784,33 @@
     .chat-panel[hidden] { display: none; }
     .chat-panel:not([hidden]) { animation: chat-open .24s cubic-bezier(.2,.8,.2,1) both; transform-origin: bottom right; }
     @keyframes chat-open { from { opacity: 0; transform: translateY(12px) scale(.97); } to { opacity: 1; transform: translateY(0) scale(1); } }
-    .chat-loading { position: absolute; inset: 104px 0 0; display: grid; place-content: center; justify-items: center; gap: 12px; background: var(--pannel-background-color); border-radius: 18px; z-index: 1; font-size: .88rem; }
+    .chat-loading { position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; gap: 12px; background: var(--pannel-background-color); border-radius: 18px; z-index: 1; font-size: .88rem; }
     .chat-loading[hidden] { display: none; }
     .chat-spinner { width: 34px; height: 34px; border: 3px solid #12816144; border-top-color: #128161; border-radius: 50%; animation: chat-spin .8s linear infinite; }
     @keyframes chat-spin { to { transform: rotate(360deg); } }
     @media (prefers-reduced-motion: reduce) { .chat-panel:not([hidden]), .chat-spinner { animation: none; } }
-    .chat-header { padding: 17px 19px 12px; border-bottom: 1px solid #8884; }
+    .chat-header { padding: 12px 16px; border-bottom: 1px solid #8884; }
     .chat-header strong { display: block; font-size: 1.05rem; }
+    .chat-content { position: relative; flex: 1; min-height: 0; display: flex; flex-direction: column; }
+    .chat-manage { display: flex; gap: 6px; margin-top: 8px; }
+    .chat-manage[hidden] { display: none; }
+    .chat-tool-danger { color: #b33d46 !important; border-color: #b33d4677 !important; }
+    [data-theme="dark"] .chat-tool-danger { color: #ff9ba1 !important; }
+    .chat-dialog h2 { margin: 0; font-size: 1.15rem; font-weight: 700; }
+    .chat-dialog small { color: var(--text-color); opacity: .7; line-height: 1.5; }
+    .chat-tool:focus-visible, .chat-send:focus-visible, .chat-toggle:focus-visible, .chat-channel-bar select:focus-visible, .channel-form input:focus-visible, .chat-compose textarea:focus-visible { outline: 3px solid #37a98999; outline-offset: 2px; }
+    .chat-tool:disabled { opacity: .5; cursor: wait; }
     .chat-channel-bar { display: flex; gap: 5px; margin-top: 9px; }
-    .chat-channel-bar select { min-width: 0; flex: 1; border: 1px solid #8887; border-radius: 8px; background: var(--pannel-background-color); color: var(--text-color); font-size: .78rem; }
+    .chat-channel-bar select { min-width: 0; flex: 1; appearance: none; border: 1px solid #12816188; border-radius: 8px; padding: 7px 30px 7px 10px; background-color: var(--pannel-background-color); background-image: linear-gradient(45deg, transparent 50%, var(--text-color) 50%), linear-gradient(135deg, var(--text-color) 50%, transparent 50%); background-position: calc(100% - 16px) 50%, calc(100% - 11px) 50%; background-size: 5px 5px; background-repeat: no-repeat; color: var(--text-color); font: 600 .78rem system-ui, sans-serif; cursor: pointer; }
+    .chat-channel-menu { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; align-items: center; }
+    .chat-channel-menu[hidden] { display: none; }
+    .chat-channel-menu .chat-invite { flex-basis: 100%; }
+    .chat-channel-menu .chat-manage { margin-top: 0; }
+    .chat-channel-menu-toggle[aria-expanded="true"] { background: #1281611c; }
     .chat-invite { margin-top: 6px; font-size: .73rem; overflow-wrap: anywhere; }
     .channel-form { display: grid; gap: 12px; }
     .channel-form [hidden] { display: none; }
-    #channel-dialog { width: min(430px, calc(100vw - 32px)); }
+    #channel-dialog, #channel-leave-dialog, #site-alert-dialog { width: min(430px, calc(100vw - 32px)); }
     .channel-form label { display: grid; gap: 5px; }
     .channel-form input { padding: 8px; border: 1px solid #8887; border-radius: 8px; background: var(--pannel-background-color); color: var(--text-color); }
     .channel-form-actions { display: flex; gap: 8px; justify-content: flex-end; }
@@ -811,17 +825,18 @@
     .chat-body { white-space: pre-wrap; overflow-wrap: anywhere; font-size: .9rem; line-height: 1.5; }
     .chat-share-label { display: inline-block; padding: 3px 8px; border-radius: 6px; background: #1281611c; color: #126b52; font-size: .74rem; font-weight: 600; }
     [data-theme="dark"] .chat-share-label { background: #83d3b21c; color: #83d3b2; }
-    .chat-compose { border-top: 1px solid #8884; padding: 12px 16px 15px; }
-    .chat-compose textarea { display: block; resize: none; width: 100%; min-height: 62px; padding: 9px 11px; border: 1px solid #8887; border-radius: 10px; background: var(--pannel-background-color); color: var(--text-color); font: inherit; font-size: .9rem; }
+    .chat-compose { border-top: 1px solid #8884; padding: 9px 12px 10px; }
+    .chat-compose textarea { display: block; resize: vertical; width: 100%; min-height: 48px; padding: 9px 11px; border: 1px solid #8887; border-radius: 10px; background: var(--pannel-background-color); color: var(--text-color); font: inherit; font-size: .9rem; }
     .chat-actions { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 8px; }
     .chat-send { padding: 7px 16px; }
     .chat-send:disabled { opacity: .55; cursor: wait; }
 
     .chat-tools { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 8px; }
-    .chat-tool, .chat-table-button { border: 1px solid #12816188; color: var(--text-color); background: transparent; border-radius: 8px; padding: 5px 8px; font-size: .76rem; cursor: pointer; }
+    .chat-tool, .chat-table-button { border: 1px solid #12816188; color: var(--text-color); background: transparent; border-radius: 8px; min-height: 34px; padding: 6px 9px; font: 600 .76rem system-ui, sans-serif; cursor: pointer; }
+    .chat-tool:hover, .chat-table-button:hover { background: #1281611c; }
     .chat-tool[aria-pressed="true"] { background: #128161; color: white; }
     .chat-attachment-preview { font-size: .76rem; margin: 0 0 8px; overflow-wrap: anywhere; }
-    .chat-attachment-preview button { border: 0; background: transparent; color: var(--text-color); text-decoration: underline; cursor: pointer; }
+    .chat-attachment-preview button { border: 1px solid #8887; border-radius: 8px; padding: 4px 8px; background: transparent; color: var(--text-color); cursor: pointer; }
     .chat-code { white-space: pre; overflow: auto; padding: 10px; margin: 8px 0 0; border-radius: 8px; background: #80808020; font: .8rem/1.5 monospace; }
     .chat-table-button { margin-top: 8px; color: #128161; font-weight: 700; }
     [data-theme="dark"] .chat-table-button { color: #83d3b2; }
@@ -1395,21 +1410,32 @@
       });
   </script>
 
+  <dialog class="chat-dialog" id="site-alert-dialog" aria-labelledby="site-alert-title"><div class="channel-form"><h2 id="site-alert-title">提示</h2><p id="site-alert-message" style="white-space: pre-wrap; overflow-wrap: anywhere;"></p><div class="channel-form-actions"><button type="button" class="chat-send" id="site-alert-ok">確定</button></div></div></dialog>
+  <script>
+    function showAlert(message) {
+      const dialog = document.getElementById('site-alert-dialog');
+      document.getElementById('site-alert-message').textContent = String(message);
+      if (!dialog.open) dialog.showModal();
+    }
+    document.getElementById('site-alert-ok').addEventListener('click', () => document.getElementById('site-alert-dialog').close());
+  </script>
+
   <div class="chat-widget" lang="zh-Hant-TW">
     <section class="chat-panel" id="chat-panel" aria-label="資料庫聊天室" hidden>
-      <div class="chat-loading" id="chat-loading" role="status"><span class="chat-spinner" aria-hidden="true"></span><span id="chat-loading-text">正在為你取一個資料庫暱稱…</span><button type="button" id="chat-retry" class="chat-send" hidden>再試一次</button></div>
-      <div class="chat-header"><strong>資料庫聊天室</strong><small>一起討論資料庫 · 訊息保留 7 天</small><div class="chat-channel-bar"><select id="chat-channel" aria-label="聊天頻道"><option value="">公開聊天室</option></select><button type="button" class="chat-tool" id="channel-create">建立</button><button type="button" class="chat-tool" id="channel-join">加入</button></div><div class="chat-invite" id="channel-invite" hidden></div></div>
+      <div class="chat-header"><strong>資料庫聊天室</strong><small>一起討論資料庫 · 訊息保留 7 天</small><div class="chat-channel-bar"><select id="chat-channel" aria-label="聊天頻道"><option value="">公開聊天室</option></select><button type="button" class="chat-tool chat-channel-menu-toggle" id="channel-menu-toggle" aria-expanded="false" aria-controls="channel-menu">頻道設定</button></div><div class="chat-channel-menu" id="channel-menu" hidden><button type="button" class="chat-tool" id="channel-create">建立</button><button type="button" class="chat-tool" id="channel-join">加入</button><div class="chat-manage" id="chat-manage" hidden><button type="button" class="chat-tool" id="channel-rename">修改暱稱</button><button type="button" class="chat-tool chat-tool-danger" id="channel-leave">退出頻道</button></div><div class="chat-invite" id="channel-invite" hidden></div></div></div>
+      <div class="chat-content"><div class="chat-loading" id="chat-loading" role="status"><span class="chat-spinner" aria-hidden="true"></span><span id="chat-loading-text">正在為你取一個資料庫暱稱…</span><button type="button" id="chat-retry" class="chat-send" hidden>再試一次</button></div>
       <div class="chat-messages" id="chat-messages" aria-live="polite"><div class="chat-empty">正在載入訊息…</div></div>
       <form class="chat-compose" id="chat-form" inert>
         <div class="chat-tools"><button type="button" class="chat-tool" id="chat-code-mode" aria-pressed="false">貼程式碼</button><button type="button" class="chat-tool" id="chat-schema">帶入 Schema</button><button type="button" class="chat-tool" id="chat-query">帶入 Query</button><button type="button" class="chat-tool" id="chat-result">帶入執行結果</button></div>
         <div class="chat-attachment-preview" id="chat-preview" hidden><span></span> <button type="button" id="chat-remove">移除</button></div>
         <textarea id="chat-text" maxlength="1000" aria-label="聊天訊息" placeholder="聊聊資料庫吧…"></textarea>
         <div class="chat-actions"><span class="chat-status" id="chat-status">正在取得匿名名稱…</span><button class="chat-send" type="submit">送出</button></div>
-      </form>
+      </form></div>
     </section>
     <button class="chat-toggle" id="chat-toggle" type="button" aria-expanded="false" aria-controls="chat-panel">💬 聊天室</button>
   </div>
-  <dialog class="chat-dialog" id="channel-dialog" aria-labelledby="channel-title"><form class="channel-form" id="channel-form"><h2 id="channel-title">建立私人頻道</h2><label id="channel-name-label">頻道名稱<input id="channel-name" maxlength="50" required></label><label id="channel-code-label" hidden>配對碼<input id="channel-code" maxlength="32" autocomplete="off"></label><label>你的頻道暱稱<input id="channel-nickname" maxlength="24" required></label><small>配對碼可讓其他人加入，請只分享給信任的人。更換瀏覽器或清除資料後需重新加入。</small><span id="channel-error" class="channel-error" aria-live="polite"></span><div class="channel-form-actions"><button type="button" class="chat-tool" id="channel-cancel">取消</button><button type="submit" class="chat-send" id="channel-submit">建立頻道</button></div></form></dialog>
+  <dialog class="chat-dialog" id="channel-dialog" aria-labelledby="channel-title"><form class="channel-form" id="channel-form"><h2 id="channel-title">建立私人頻道</h2><label id="channel-name-label">頻道名稱<input id="channel-name" maxlength="50" required></label><label id="channel-code-label" hidden>配對碼<input id="channel-code" maxlength="32" autocomplete="off"></label><label>你的頻道暱稱<input id="channel-nickname" maxlength="24" required></label><small id="channel-help">配對碼可讓其他人加入，請只分享給信任的人。更換瀏覽器或清除資料後需重新加入。</small><span id="channel-error" class="channel-error" aria-live="polite"></span><div class="channel-form-actions"><button type="button" class="chat-tool" id="channel-cancel">取消</button><button type="submit" class="chat-send" id="channel-submit">建立頻道</button></div></form></dialog>
+  <dialog class="chat-dialog" id="channel-leave-dialog" aria-labelledby="channel-leave-title"><div class="channel-form"><h2 id="channel-leave-title">退出頻道</h2><p id="channel-leave-message"></p><div class="channel-form-actions"><button type="button" class="chat-tool" id="channel-leave-cancel">取消</button><button type="button" class="chat-tool chat-tool-danger" id="channel-leave-confirm">退出頻道</button></div></div></dialog>
   <dialog class="chat-dialog" id="chat-dialog" aria-labelledby="chat-dialog-title"><div class="chat-dialog-header"><h2 id="chat-dialog-title">執行結果</h2><button type="button" class="chat-tool" id="chat-dialog-close">關閉</button></div><div class="chat-dialog-content" id="chat-dialog-content"></div></dialog>
   <script>
     (() => {
@@ -1424,8 +1450,11 @@
       const channelSelect = document.getElementById('chat-channel'), invite = document.getElementById('channel-invite');
       const channelDialog = document.getElementById('channel-dialog'), channelForm = document.getElementById('channel-form');
       const channelName = document.getElementById('channel-name'), channelCode = document.getElementById('channel-code'), channelNickname = document.getElementById('channel-nickname');
-      const channelError = document.getElementById('channel-error');
+      const channelError = document.getElementById('channel-error'), manage = document.getElementById('chat-manage');
+      const channelMenu = document.getElementById('channel-menu'), menuToggle = document.getElementById('channel-menu-toggle');
+      menuToggle.addEventListener('click', () => { channelMenu.hidden = !channelMenu.hidden; menuToggle.setAttribute('aria-expanded', String(!channelMenu.hidden)); });
       let timer, loading = false, named = false, attachment = null, lastMessages = null, currentChannel = '', channelVersion = 0, channels = [], channelMode = 'create';
+      const drafts = new Map();
       async function loadChannels(selected = currentChannel) {
         const response = await fetch('/api/private-channels', {signal:AbortSignal.timeout(10000)});
         if (!response.ok) throw new Error('無法讀取頻道');
@@ -1435,8 +1464,18 @@
         channelSelect.replaceChildren(...options); channelSelect.value = selected;
       }
       function selectChannel(value) {
+        if (value !== currentChannel) {
+          drafts.set(currentChannel, {text:input.value, attachment, code:codeMode.getAttribute('aria-pressed') === 'true'});
+          const draft = drafts.get(value) || {text:'', attachment:null, code:false};
+          input.value = draft.text; selectAttachment(draft.attachment);
+          codeMode.setAttribute('aria-pressed', String(draft.code)); input.maxLength = draft.code ? 32000 : 1000;
+          input.placeholder = draft.code ? '貼上程式碼，保留換行和縮排…' : '聊聊資料庫吧…';
+          input.setAttribute('aria-label', draft.code ? '程式碼' : '聊天訊息');
+        }
         currentChannel = value; channelVersion++; loading = false; lastMessages = null;
+        channelMenu.hidden = true; menuToggle.setAttribute('aria-expanded', 'false');
         const channel = channels.find(item => item.id === value);
+        manage.hidden = !channel;
         invite.hidden = !channel || !channel.code;
         invite.replaceChildren();
         if (channel && channel.code) {
@@ -1452,23 +1491,32 @@
       channelSelect.addEventListener('change', () => selectChannel(channelSelect.value));
       function openChannelDialog(mode) {
         channelMode = mode; channelForm.reset(); channelError.textContent = '';
-        const creating = mode === 'create';
-        document.getElementById('channel-title').textContent = creating ? '建立私人頻道' : '加入私人頻道';
-        document.getElementById('channel-submit').textContent = creating ? '建立頻道' : '加入頻道';
+        const creating = mode === 'create', joining = mode === 'join', renaming = mode === 'rename';
+        document.getElementById('channel-title').textContent = creating ? '建立私人頻道' : joining ? '加入私人頻道' : '修改頻道暱稱';
+        document.getElementById('channel-submit').textContent = creating ? '建立頻道' : joining ? '加入頻道' : '儲存';
         document.getElementById('channel-name-label').hidden = !creating; channelName.required = creating;
-        document.getElementById('channel-code-label').hidden = creating; channelCode.required = !creating;
+        document.getElementById('channel-code-label').hidden = !joining; channelCode.required = joining;
+        document.getElementById('channel-help').textContent = renaming ? '新暱稱會用於之後的訊息。' : '配對碼可讓其他人加入，請只分享給信任的人。更換瀏覽器或清除資料後需重新加入。';
+        if (renaming) channelNickname.value = channels.find(item => item.id === currentChannel)?.nickname || '';
         channelDialog.showModal();
       }
       document.getElementById('channel-create').addEventListener('click', () => openChannelDialog('create'));
       document.getElementById('channel-join').addEventListener('click', () => openChannelDialog('join'));
+      document.getElementById('channel-rename').addEventListener('click', () => openChannelDialog('rename'));
       document.getElementById('channel-cancel').addEventListener('click', () => channelDialog.close());
       channelForm.addEventListener('submit', async event => {
         event.preventDefault(); const submit = document.getElementById('channel-submit'); submit.disabled = true; channelError.textContent = '';
         try {
-          const creating = channelMode === 'create';
-          const response = await fetch(creating ? '/api/private-channels' : '/api/private-channels/join', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(creating ? {name:channelName.value, nickname:channelNickname.value} : {code:channelCode.value, nickname:channelNickname.value}), signal:AbortSignal.timeout(10000)});
+          const creating = channelMode === 'create', renaming = channelMode === 'rename';
+          const target = currentChannel, version = channelVersion;
+          const url = creating ? '/api/private-channels' : renaming ? '/api/private-channels/' + encodeURIComponent(target) + '/nickname' : '/api/private-channels/join';
+          const payload = creating ? {name:channelName.value, nickname:channelNickname.value} : renaming ? {nickname:channelNickname.value} : {code:channelCode.value, nickname:channelNickname.value};
+          const response = await fetch(url, {method:renaming ? 'PATCH' : 'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload), signal:AbortSignal.timeout(10000)});
           const result = await response.json(); if (!response.ok) throw new Error(result.detail || '操作失敗');
-          await loadChannels(result.id); channelDialog.close(); selectChannel(result.id);
+          if (renaming && version !== channelVersion) { channelDialog.close(); return; }
+          const next = renaming ? target : result.id;
+          await loadChannels(next); channelDialog.close(); selectChannel(next);
+          if (creating) { channelMenu.hidden = false; menuToggle.setAttribute('aria-expanded', 'true'); }
         } catch (error) { channelError.textContent = error.message || '操作失敗，請稍後再試'; }
         finally { submit.disabled = false; }
       });
@@ -1484,6 +1532,30 @@
         input.setAttribute('aria-label', enabled ? '程式碼' : '聊天訊息');
         if (enabled) selectAttachment(null);
         input.focus();
+      });
+      const leaveDialog = document.getElementById('channel-leave-dialog');
+      document.getElementById('channel-leave').addEventListener('click', () => {
+        const channel = channels.find(item => item.id === currentChannel);
+        if (!channel) return;
+        document.getElementById('channel-leave-message').textContent = channel.code ? '退出後需要配對碼才能重新加入。請先保存配對碼；退出後將無法查看它。' : '退出後需要配對碼才能重新加入。';
+        leaveDialog.showModal();
+      });
+      document.getElementById('channel-leave-cancel').addEventListener('click', () => leaveDialog.close());
+      document.getElementById('channel-leave-confirm').addEventListener('click', async () => {
+        const target = currentChannel, version = channelVersion;
+        if (!target) return;
+        const leave = document.getElementById('channel-leave-confirm'); leave.disabled = true;
+        try {
+          const response = await fetch('/api/private-channels/' + encodeURIComponent(target) + '/membership', {method:'DELETE', signal:AbortSignal.timeout(10000)});
+          if (!response.ok) { const result = await response.json(); throw new Error(result.detail || '退出失敗'); }
+          leaveDialog.close();
+          channels = channels.filter(item => item.id !== target);
+          channelSelect.replaceChildren(new Option('公開聊天室', ''), ...channels.map(item => new Option(item.name, item.id)));
+          if (version === channelVersion) { channelSelect.value = ''; selectChannel(''); }
+          else channelSelect.value = currentChannel;
+          drafts.delete(target);
+        } catch (error) { leaveDialog.close(); status.textContent = error.message || '退出失敗，請稍後再試'; }
+        finally { leave.disabled = false; }
       });
       document.getElementById('chat-remove').addEventListener('click', () => selectAttachment(null));
       function attachEditor(editor, label) {
@@ -1573,14 +1645,21 @@
         if (!messageText) return;
         if (sendingAttachment && new TextEncoder().encode(JSON.stringify(sendingAttachment)).length > 32768) { status.textContent = '附件超過 32 KB，請縮小內容'; return; }
         button.disabled = true;
-        const target = currentChannel;
+        const target = currentChannel, version = channelVersion, sentInput = input.value, sentAttachment = attachment;
         try {
           const payload = {text:messageText, attachment:sendingAttachment};
           if (!target) payload.visitor_id = await visitor();
           const response = await fetch(target ? '/api/private-channels/' + encodeURIComponent(target) + '/messages' : '/api/chat', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload), signal:AbortSignal.timeout(10000)});
           const data = await response.json();
           if (!response.ok) throw new Error(data.detail || '發送失敗');
-          input.value = ''; selectAttachment(null); if (target === currentChannel) { await refresh(); list.scrollTop = list.scrollHeight; }
+          if (target === currentChannel && version === channelVersion) {
+            if (input.value === sentInput) input.value = '';
+            if (attachment === sentAttachment) selectAttachment(null);
+            await refresh(); list.scrollTop = list.scrollHeight;
+          } else {
+            const draft = drafts.get(target);
+            if (draft && draft.text === sentInput && draft.attachment === sentAttachment) drafts.set(target, {...draft, text:'', attachment:null});
+          }
         } catch (error) { status.textContent = error.message || '發送失敗，請稍後再試'; }
         finally { button.disabled = false; }
       });
@@ -1737,13 +1816,13 @@
     navigator.clipboard
       .writeText(schemaEditor.getValue())
       .then(() => showSnackbar("Schema SQL已複製到剪貼簿"))
-      .catch((err) => alert("複製失敗: ", err));
+      .catch((err) => showAlert("複製失敗: ", err));
   });
   copyQueryBtn.addEventListener("click", function () {
     navigator.clipboard
       .writeText(queryEditor.getValue())
       .then(() => showSnackbar("Query SQL已複製到剪貼簿"))
-      .catch((err) => alert("複製失敗: ", err));
+      .catch((err) => showAlert("複製失敗: ", err));
   });
 
   // 如果未暫存但重整頁面，跳出確認視窗
@@ -1779,7 +1858,7 @@
     localStorage.setItem("schemaSql", schemaSql);
     localStorage.setItem("querySql", querySql);
 
-    alert(
+    showAlert(
       "已暫存至瀏覽器\n下次載入本頁時將自動帶入。\n\n此功能使用 Local Storage，幾乎無期限或長度限制🤗！"
     );
   });
@@ -1790,7 +1869,7 @@
     const confirmDelete = confirm("確定要刪除暫存嗎？");
     if (confirmDelete) {
       dropCookie("dbPlayground");
-      alert("已刪除暫存");
+      showAlert("已刪除暫存");
       localStorage.removeItem("schemaSql");
       localStorage.removeItem("querySql");
     }
@@ -1817,7 +1896,7 @@
         const file = e.target.files[0];
         // 拒絕非.sql或.txt檔
         if (!file.name.endsWith(".sql") && !file.name.endsWith(".txt")) {
-          alert("請選擇.sql或.txt檔");
+          showAlert("請選擇.sql或.txt檔");
           return;
         }
         const reader = new FileReader();
@@ -1997,7 +2076,7 @@
     const dbVersion = document.getElementById("db-version").value;
 
     if (dbType == "Select Database" || dbVersion == "Select Version") {
-      alert("請選擇資料庫類型和版本");
+      showAlert("請選擇資料庫類型和版本");
       // 回頁面頂端
       if (
         !document
@@ -2148,7 +2227,7 @@
       navigator.clipboard
         .writeText(cleanResultContent)
         .then(() => showSnackbar("HTML內容已複製到剪貼簿"))
-        .catch((err) => alert("複製失敗: ", err));
+        .catch((err) => showAlert("複製失敗: ", err));
     });
 
   document
@@ -2160,7 +2239,7 @@
       navigator.clipboard
         .writeText(markdown)
         .then(() => showSnackbar("Markdown內容已複製到剪貼簿"))
-        .catch((err) => alert("複製失敗: ", err));
+        .catch((err) => showAlert("複製失敗: ", err));
     });
 
   document
@@ -2171,7 +2250,7 @@
       navigator.clipboard
         .writeText(resultContent)
         .then(() => showSnackbar("純文字內容已複製到剪貼簿"))
-        .catch((err) => alert("複製失敗: ", err));
+        .catch((err) => showAlert("複製失敗: ", err));
     });
 
   function convertHtmlToMarkdown(html) {
@@ -2206,7 +2285,7 @@
 <!-- <script>
   const getMoreHazelPoints = document.getElementById("getMoreHazelPoints");
   getMoreHazelPoints.addEventListener("click", function () {
-    alert("HazelPoints 及相關功能尚在開發中！");
+    showAlert("HazelPoints 及相關功能尚在開發中！");
   });
 </script> -->
 
@@ -2248,7 +2327,7 @@
     toSQL_loader.style.display = "inline-block";
     const tableName = document.getElementById("toSQL_tableName").value.trim();
     if (!tableName) {
-      alert("Please enter a table name.");
+      showAlert("Please enter a table name.");
       toSQL_loader.style.display = "none";
       return;
     }
@@ -2261,7 +2340,7 @@
     if (inputType === "file") {
       const fileInput = document.getElementById("toSQL_csvFile");
       if (!fileInput.files.length) {
-        alert("Please select a CSV file.");
+        showAlert("Please select a CSV file.");
         toSQL_loader.style.display = "none";
         return;
       }
@@ -2269,7 +2348,7 @@
     } else {
       const csvText = document.getElementById("toSQL_csvText").value.trim();
       if (!csvText) {
-        alert("Please enter CSV data.");
+        showAlert("Please enter CSV data.");
         toSQL_loader.style.display = "none";
         return;
       }
@@ -2292,7 +2371,7 @@
       document.getElementById("toSQL_sqlResult").textContent = result.sql;
     } else {
       const error = await response.json();
-      alert("Failed to convert the CSV file: " + error.message);
+      showAlert("Failed to convert the CSV file: " + error.message);
     }
 
     toSQL_loader.style.display = "none";
@@ -2316,7 +2395,7 @@
   async function toSQL_insertToSchemaSQL() {
     const sql = document.getElementById("toSQL_sqlResult").textContent;
     if (!sql) {
-      alert("No SQL to insert.");
+      showAlert("No SQL to insert.");
       return;
     }
 

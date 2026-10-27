@@ -72,3 +72,51 @@ class PrivateChatTests(unittest.TestCase):
         room = self.owner.post('/api/private-channels', headers=self.origin, json={'name':'群組','nickname':'小貓'}).json()
         response = self.guest.post('/api/private-channels/join', headers=self.origin, json={'code':room['code'],'nickname':'小貓'})
         self.assertEqual(response.status_code, 409)
+
+    def test_multiple_channels_nickname_changes_and_leave_rejoin(self):
+        first = self.owner.post('/api/private-channels', headers=self.origin, json={'name':'一','nickname':'甲'}).json()
+        second = self.other.post('/api/private-channels', headers=self.origin, json={'name':'二','nickname':'乙'}).json()
+        self.assertEqual(self.guest.post('/api/private-channels/join', headers=self.origin, json={'code':first['code'],'nickname':'小貓'}).status_code, 200)
+        self.assertEqual(self.guest.post('/api/private-channels/join', headers=self.origin, json={'code':second['code'],'nickname':'水豚'}).status_code, 200)
+        self.assertEqual(len(self.guest.get('/api/private-channels').json()['channels']), 2)
+        changed = self.guest.patch(f"/api/private-channels/{first['id']}/nickname", headers=self.origin, json={'nickname':'狐狸'})
+        self.assertEqual(changed.status_code, 200)
+        self.assertEqual(self.guest.get(f"/api/private-channels/{first['id']}/messages").json()['name'], '狐狸')
+        self.assertEqual(self.guest.get(f"/api/private-channels/{second['id']}/messages").json()['name'], '水豚')
+        self.assertEqual(self.guest.delete(f"/api/private-channels/{first['id']}/membership", headers=self.origin).status_code, 204)
+        self.assertEqual(self.guest.get(f"/api/private-channels/{first['id']}/messages").status_code, 404)
+        self.assertEqual(len(self.guest.get('/api/private-channels').json()['channels']), 1)
+        self.assertEqual(self.guest.post('/api/private-channels/join', headers=self.origin, json={'code':first['code'],'nickname':'再加入'}).status_code, 200)
+        self.assertEqual(self.guest.get(f"/api/private-channels/{first['id']}/messages").json()['name'], '再加入')
+
+    def test_leave_frees_nickname_and_cannot_change_others(self):
+        room = self.owner.post('/api/private-channels', headers=self.origin, json={'name':'一','nickname':'甲'}).json()
+        self.guest.post('/api/private-channels/join', headers=self.origin, json={'code':room['code'],'nickname':'乙'})
+        self.assertEqual(self.guest.patch(f"/api/private-channels/{room['id']}/nickname", headers=self.origin, json={'nickname':'甲'}).status_code, 409)
+        self.assertEqual(self.other.patch(f"/api/private-channels/{room['id']}/nickname", headers=self.origin, json={'nickname':'別人'}).status_code, 404)
+        self.assertEqual(self.guest.delete(f"/api/private-channels/{room['id']}/membership", headers=self.origin).status_code, 204)
+        self.assertEqual(self.other.post('/api/private-channels/join', headers=self.origin, json={'code':room['code'],'nickname':'乙'}).status_code, 200)
+
+    def test_owner_can_leave_rejoin_and_recover_code(self):
+        room = self.owner.post('/api/private-channels', headers=self.origin, json={'name':'一','nickname':'甲'}).json()
+        self.assertEqual(self.owner.delete(f"/api/private-channels/{room['id']}/membership", headers=self.origin).status_code, 204)
+        self.assertEqual(self.owner.get('/api/private-channels').json()['channels'], [])
+        self.assertEqual(self.owner.post('/api/private-channels/join', headers=self.origin, json={'code':room['code'],'nickname':'甲新'}).status_code, 200)
+        self.assertEqual(self.owner.get('/api/private-channels').json()['channels'][0]['code'], room['code'])
+
+    def test_old_messages_keep_name_and_exit_does_not_delete_history(self):
+        room = self.owner.post('/api/private-channels', headers=self.origin, json={'name':'一','nickname':'舊名'}).json()
+        url = f"/api/private-channels/{room['id']}"
+        self.owner.post(url+'/messages', headers=self.origin, json={'text':'舊訊息'})
+        self.assertEqual(self.owner.patch(url+'/nickname', headers=self.origin, json={'nickname':'新名'}).status_code, 200)
+        self.assertEqual(self.owner.get(url+'/messages').json()['messages'][0]['name'], '舊名')
+        self.assertEqual(self.owner.delete(url+'/membership', headers=self.origin).status_code, 204)
+        self.assertEqual(self.owner.post('/api/private-channels/join', headers=self.origin, json={'code':room['code'],'nickname':'回來'}).status_code, 200)
+        self.assertEqual(self.owner.get(url+'/messages').json()['messages'][0]['body'], '舊訊息')
+
+    def test_membership_operations_reject_cross_origin(self):
+        room = self.owner.post('/api/private-channels', headers=self.origin, json={'name':'一','nickname':'甲'}).json()
+        url = f"/api/private-channels/{room['id']}"
+        self.assertEqual(self.owner.patch(url+'/nickname', headers={'Origin':'https://evil.test'}, json={'nickname':'乙'}).status_code, 403)
+        self.assertEqual(self.owner.delete(url+'/membership', headers={'Origin':'https://evil.test'}).status_code, 403)
+        self.assertEqual(self.owner.get(url+'/messages').json()['name'], '甲')
