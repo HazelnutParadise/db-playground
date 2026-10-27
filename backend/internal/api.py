@@ -4,10 +4,12 @@ import internal.execute as execute
 import internal.csv_to_sql as c2q
 from fastapi import APIRouter, Request, File, UploadFile, Form
 from fastapi.responses import JSONResponse
-from typing import Any
+from uuid import UUID
 from pydantic import BaseModel, field_validator, ValidationInfo
 
 from internal.consts import ALLOW_DB_TYPES_AND_VERSIONS
+from internal.auth import current_member_id
+from internal.presence import PresenceTracker
 from internal.ask_ai_for_help import ask_ai_for_help as ask_ai_for_help_func
 
 api_router = APIRouter(
@@ -19,6 +21,21 @@ api_router = APIRouter(
 async def get_db_list() -> JSONResponse:
     db_list: dict[str, list[str]] = ALLOW_DB_TYPES_AND_VERSIONS
     return JSONResponse(content={"databases": db_list})
+
+
+presence = PresenceTracker()
+
+
+class PresenceRequest(BaseModel):
+    visitor_id: UUID
+
+
+@api_router.post("/presence")
+async def record_presence(payload: PresenceRequest, request: Request) -> JSONResponse:
+    count = presence.record(payload.visitor_id, current_member_id(request))
+    if count is None:
+        return JSONResponse(status_code=503, content={"error": "Presence capacity reached"})
+    return JSONResponse(content={"count": count}, headers={"Cache-Control": "no-store"})
 
 
 class ExecuteRequest(BaseModel):

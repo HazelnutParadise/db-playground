@@ -1,0 +1,20 @@
+[project]
+name = "db-playground"
+version = "0.1.0"
+requires-python = ">=3.15,<3.16"
+dependencies = [
+    "authlib",
+    "itsdangerous",
+    "fastapi",
+    "mysql-connector-python",
+    "psycopg2-binary",
+    "uvicorn",
+    "databases",
+    "aiomysql",
+    "cryptography",
+    "asyncpg",
+    "sqlparse",
+    "pandas",
+    "python-multipart",
+    "langchain-ollama",
+]

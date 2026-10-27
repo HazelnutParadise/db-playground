@@ -32,7 +32,20 @@
 
     * {
       box-sizing: border-box;
+    }
+
+    body {
       transition: background-color 0.5s ease;
+    }
+
+    .panel, .result-window, .ad-container, .result-window .table-container {
+      transition: background-color 0.5s ease 0.08s;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      body, .panel, .result-window, .ad-container, .result-window .table-container {
+        transition: none;
+      }
     }
 
     :root {
@@ -168,6 +181,47 @@
       font-size: 12px;
       display: inline-block;
       margin-left: 10px;
+    }
+
+    #member-section[hidden], #member-section [hidden] {
+      display: none !important;
+    }
+
+    .online-status {
+      align-self: flex-end;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 12px;
+      margin: 0 0 10px;
+      border: 1px solid #dfe3e6;
+      border-radius: 20px;
+      background-color: var(--pannel-background-color);
+      color: var(--text-color);
+      font-size: 13px;
+      line-height: 1.3;
+    }
+
+    .online-status::before {
+      content: "";
+      width: 8px;
+      height: 8px;
+      flex: none;
+      border-radius: 50%;
+      background-color: #858585;
+    }
+
+    .online-status[data-state="online"]::before {
+      background-color: #127c00;
+    }
+
+    [data-theme="dark"] .online-status[data-state="online"]::before {
+      background-color: #8eb142;
+    }
+
+    #online-count {
+      font-weight: bold;
+      font-variant-numeric: tabular-nums;
     }
 
     .inSidebar-btn,
@@ -721,11 +775,110 @@
         stroke-dashoffset: -124;
       }
     }
+
+    .chat-widget { position: fixed; right: 20px; bottom: 20px; z-index: 1050; display: flex; flex-direction: column; align-items: flex-end; font-family: system-ui, sans-serif; }
+    .chat-toggle, .chat-send { border: 0; border-radius: 999px; background: #128161; color: white; font-weight: 700; cursor: pointer; }
+    .chat-toggle { padding: 12px 20px; box-shadow: 0 6px 22px #0003; }
+    .chat-toggle:hover, .chat-send:hover { background: #0b694e; }
+    .chat-panel { position: relative; width: min(390px, calc(100vw - 32px)); height: min(530px, 72vh); margin-bottom: 12px; display: flex; flex-direction: column; overflow: hidden; border: 1px solid #8885; border-radius: 18px; background: var(--pannel-background-color); color: var(--text-color); box-shadow: 0 14px 40px #0004; }
+    .chat-panel[hidden] { display: none; }
+    .chat-panel:not([hidden]) { animation: chat-open .24s cubic-bezier(.2,.8,.2,1) both; transform-origin: bottom right; }
+    @keyframes chat-open { from { opacity: 0; transform: translateY(12px) scale(.97); } to { opacity: 1; transform: translateY(0) scale(1); } }
+    .chat-loading { position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; gap: 12px; background: var(--pannel-background-color); border-radius: 18px; z-index: 1; font-size: .88rem; }
+    .chat-loading[hidden] { display: none; }
+    .chat-spinner { width: 34px; height: 34px; border: 3px solid #12816144; border-top-color: #128161; border-radius: 50%; animation: chat-spin .8s linear infinite; }
+    @keyframes chat-spin { to { transform: rotate(360deg); } }
+    @media (prefers-reduced-motion: reduce) { .chat-panel:not([hidden]), .chat-spinner { animation: none; } }
+    .chat-header { padding: 17px 19px 12px; border-bottom: 1px solid #8884; }
+    .chat-header strong { display: block; font-size: 1.05rem; }
+    .chat-header small, .chat-meta, .chat-status { color: var(--text-color); opacity: .7; font-size: .76rem; }
+    .chat-messages { flex: 1; min-height: 0; overflow-y: auto; padding: 15px 18px; }
+    .chat-empty { text-align: center; padding: 48px 4px; opacity: .65; font-size: .86rem; }
+    .chat-message { margin-bottom: 15px; }
+    .chat-meta { display: flex; gap: 8px; align-items: baseline; margin-bottom: 4px; }
+    .chat-meta strong { color: #168364; opacity: 1; }
+    [data-theme="dark"] .chat-meta strong { color: #83d3b2; }
+    .chat-body { white-space: pre-wrap; overflow-wrap: anywhere; font-size: .9rem; line-height: 1.5; }
+    .chat-compose { border-top: 1px solid #8884; padding: 12px 16px 15px; }
+    .chat-compose textarea { display: block; resize: none; width: 100%; min-height: 62px; padding: 9px 11px; border: 1px solid #8887; border-radius: 10px; background: var(--pannel-background-color); color: var(--text-color); font: inherit; font-size: .9rem; }
+    .chat-actions { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 8px; }
+    .chat-send { padding: 7px 16px; }
+    .chat-send:disabled { opacity: .55; cursor: wait; }
+    @media (max-width: 480px) { .chat-widget { right: 16px; bottom: 16px; } }
+
   </style>
 </head>
 
 <body>
   <div class="container-fluid" style="width: 100vw; display: flex; flex-direction: column">
+        <div class="online-status" id="online-status" lang="zh-Hant-TW" aria-live="polite">
+          <span>線上人數</span><span id="online-count">載入中</span>
+        </div>
+        <script>
+          (() => {
+            const display = document.getElementById('online-count');
+            const status = document.getElementById('online-status');
+            if (!window.crypto || !window.crypto.randomUUID) {
+              display.textContent = '暫時無法取得';
+              status.dataset.state = 'error';
+              return;
+            }
+            const visitorKey = 'db-playground-visitor-id';
+            let visitorId;
+            function getVisitorId() {
+              try {
+                let id = localStorage.getItem(visitorKey);
+                if (!id || !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)) {
+                  id = crypto.randomUUID();
+                  localStorage.setItem(visitorKey, id);
+                }
+                return id;
+              } catch (_) {
+                return crypto.randomUUID();
+              }
+            }
+            async function updatePresence() {
+              try {
+                const response = await fetch('/api/presence', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ visitor_id: visitorId }),
+                  signal: AbortSignal.timeout(10000)
+                });
+                if (!response.ok) throw new Error('Presence request failed');
+                const data = await response.json();
+                if (!Number.isSafeInteger(data.count) || data.count < 1) throw new Error('Invalid count');
+                display.textContent = data.count;
+                status.dataset.state = 'online';
+              } catch (_) {
+                display.textContent = '暫時無法取得';
+                status.dataset.state = 'error';
+              }
+            }
+            window.dbPlaygroundVisitor = (async () => {
+              try {
+                visitorId = navigator.locks
+                  ? await navigator.locks.request(visitorKey, getVisitorId)
+                  : getVisitorId();
+              } catch (_) {
+                visitorId = getVisitorId();
+              }
+              updatePresence();
+              setInterval(updatePresence, 30000);
+              return visitorId;
+            })();
+            window.addEventListener('storage', (event) => {
+              if (event.key === visitorKey && event.newValue && event.newValue !== visitorId) {
+                visitorId = getVisitorId();
+                window.dbPlaygroundVisitor = Promise.resolve(visitorId);
+                updatePresence();
+              }
+            });
+            document.addEventListener('visibilitychange', () => {
+              if (!document.hidden && visitorId) updatePresence();
+            });
+          })();
+        </script>
     <div style="display: flex; flex-wrap: nowrap; width: 100%">
       <aside class="col-md-3 sidebar sidebar-expanded" id="sidebar">
         <div class="panel" style="margin-right: 10px">
@@ -836,14 +989,15 @@
             </div>
 
             <!-- 會員相關 -->
-            <!-- <div lang="zh-Hant-TW">
-              <div id="user-info" style="width: 100%; display: none; flex-direction: column">
+            <div id="member-section" lang="zh-Hant-TW" hidden>
+              <div id="user-info" style="width: 100%; display: flex; flex-direction: column" hidden>
                 <strong id="user" style="
                       width: 100%;
                       font-size: 18px;
                       text-align: center;
                       margin-bottom: 0;
                     "></strong>
+                <!--
                 <div id="HazelPoints" style="
                       width: 100%;
                       font-size: 15px;
@@ -862,10 +1016,51 @@
                     獲取更多
                   </button>
                 </div>
+                -->
               </div>
-
-              <button id="login-logout-btn" class="inSidebar-btn" style="font-size: 18px"></button>
-            </div> -->
+              <form id="member-form" method="post" action="/auth/logout" hidden>
+                <button id="login-logout-btn" class="inSidebar-btn" style="font-size: 18px" type="submit"></button>
+              </form>
+              <p id="member-error" role="status" style="text-align: center" hidden></p>
+            </div>
+            <script>
+              (async () => {
+                const section = document.getElementById('member-section');
+                const message = document.getElementById('member-error');
+                const form = document.getElementById('member-form');
+                const button = document.getElementById('login-logout-btn');
+                try {
+                  const response = await fetch('/api/auth/me', { cache: 'no-store' });
+                  if (!response.ok) throw new Error('Unable to check membership');
+                  const data = await response.json();
+                  if (!data.configured) {
+                    message.textContent = '會員登入暫時無法使用';
+                    message.hidden = false;
+                  } else if (data.user) {
+                    document.getElementById('user').textContent = data.user.name;
+                    document.getElementById('user-info').hidden = false;
+                    button.textContent = '登出本站';
+                    form.hidden = false;
+                  } else {
+                    button.textContent = '登入 / 註冊';
+                    button.type = 'button';
+                    button.addEventListener('click', () => window.location.assign('/auth/login'));
+                    form.hidden = false;
+                  }
+                  const url = new URL(window.location.href);
+                  if (url.searchParams.has('auth_error')) {
+                    message.textContent = '登入未完成，請再試一次';
+                    message.hidden = false;
+                    url.searchParams.delete('auth_error');
+                    history.replaceState(null, '', url.pathname + url.search + url.hash);
+                  }
+                } catch (_) {
+                  message.textContent = '會員登入暫時無法使用';
+                  message.hidden = false;
+                }
+                section.hidden = false;
+              })();
+            </script>
 
             <a href="https://support.hazelnut-paradise.com/index.php?category_id=4&category_name=DB%20Playground"
               target="_blank" style="
@@ -919,6 +1114,7 @@
         </div>
       </aside>
       <main class="col-md-9" id="mainContent" style="width: calc(100% - 267px)">
+
         <div id="editWindows" style="width: 100%; display: flex">
           <div class="panel editor" id="editor1">
             <div class="label">
@@ -1053,11 +1249,17 @@
     <!-- CSV to SQL -->
 
     <!-- 回頁面頂端的按鈕 -->
-    <a id="back-to-top" href="#" style="writing-mode: vertical-rl">
-      <h6 style="padding: 10px; margin: 0; font-weight: bold">
+    <button id="back-to-top" type="button" style="writing-mode: vertical-rl; cursor: pointer">
+      <span style="display: block; padding: 10px; font-size: 1rem; line-height: 1.2; font-weight: bold">
         <i class="fas fa-arrow-up"></i>回頂端
-      </h6>
-    </a>
+      </span>
+    </button>
+    <script>
+      document.getElementById("back-to-top").addEventListener("click", () => {
+        const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        window.scrollTo({ top: 0, behavior: reducedMotion ? "instant" : "smooth" });
+      });
+    </script>
 
     <div id="snackbar">This is a snackbar message!</div>
 
@@ -1164,6 +1366,83 @@
         mainContent.classList.toggle("col-md-11");
       });
   </script>
+
+  <div class="chat-widget" lang="zh-Hant-TW">
+    <section class="chat-panel" id="chat-panel" aria-label="資料庫聊天室" hidden>
+      <div class="chat-loading" id="chat-loading" role="status"><span class="chat-spinner" aria-hidden="true"></span><span id="chat-loading-text">正在為你取一個資料庫暱稱…</span><button type="button" id="chat-retry" class="chat-send" hidden>再試一次</button></div>
+      <div class="chat-header"><strong>資料庫聊天室</strong><small>一起討論資料庫 · 訊息保留 7 天</small></div>
+      <div class="chat-messages" id="chat-messages" aria-live="polite"><div class="chat-empty">正在載入訊息…</div></div>
+      <form class="chat-compose" id="chat-form" inert>
+        <textarea id="chat-text" maxlength="1000" aria-label="聊天訊息" placeholder="聊聊資料庫吧…" required></textarea>
+        <div class="chat-actions"><span class="chat-status" id="chat-status">正在取得匿名名稱…</span><button class="chat-send" type="submit">送出</button></div>
+      </form>
+    </section>
+    <button class="chat-toggle" id="chat-toggle" type="button" aria-expanded="false" aria-controls="chat-panel">💬 聊天室</button>
+  </div>
+  <script>
+    (() => {
+      const panel = document.getElementById('chat-panel'), toggle = document.getElementById('chat-toggle');
+      const list = document.getElementById('chat-messages'), form = document.getElementById('chat-form');
+      const input = document.getElementById('chat-text'), status = document.getElementById('chat-status');
+      const button = form.querySelector('button');
+      const overlay = document.getElementById('chat-loading'), loadingText = document.getElementById('chat-loading-text');
+      const retry = document.getElementById('chat-retry');
+      let timer, loading = false, named = false;
+      async function visitor() {
+        if (!window.dbPlaygroundVisitor) throw new Error('瀏覽器不支援匿名識別');
+        return await window.dbPlaygroundVisitor;
+      }
+      async function refresh() {
+        if (loading || panel.hidden || document.hidden || (!retry.hidden && !named)) return;
+        loading = true;
+        try {
+          const response = await fetch('/api/chat', {headers: {'X-Visitor-ID': await visitor()}, signal: AbortSignal.timeout(60000)});
+          if (!response.ok) throw new Error('聊天室暫時無法使用');
+          const data = await response.json();
+          const nearBottom = list.scrollHeight - list.scrollTop - list.clientHeight < 60;
+          const fragment = document.createDocumentFragment();
+          for (const message of data.messages) {
+            const item = document.createElement('div'); item.className = 'chat-message';
+            const meta = document.createElement('div'); meta.className = 'chat-meta';
+            const name = document.createElement('strong'); name.textContent = message.name;
+            const time = document.createElement('time'); time.textContent = new Date(message.created_at * 1000).toLocaleString('zh-TW', {month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit'});
+            const body = document.createElement('div'); body.className = 'chat-body'; body.textContent = message.body;
+            meta.append(name, time); item.append(meta, body); fragment.append(item);
+          }
+          if (!data.messages.length) { const empty = document.createElement('div'); empty.className = 'chat-empty'; empty.textContent = '還沒有訊息，來聊聊資料庫吧。'; fragment.append(empty); }
+          list.replaceChildren(fragment);
+          if (nearBottom) list.scrollTop = list.scrollHeight;
+          status.textContent = '你的名稱：' + data.name;
+          named = true; form.inert = false; overlay.hidden = true;
+        } catch (_) {
+          if (!named) { loadingText.textContent = '暱稱暫時無法產生，請稍後再試'; retry.hidden = false; overlay.querySelector('.chat-spinner').hidden = true; }
+          else { status.textContent = '載入失敗，稍後會自動重試'; }
+        }
+        finally { loading = false; }
+      }
+      retry.addEventListener('click', () => { retry.hidden = true; overlay.querySelector('.chat-spinner').hidden = false; loadingText.textContent = '正在為你取一個資料庫暱稱…'; refresh(); });
+      toggle.addEventListener('click', () => {
+        panel.hidden = !panel.hidden;
+        toggle.setAttribute('aria-expanded', String(!panel.hidden));
+        if (!panel.hidden) { refresh(); timer = setInterval(refresh, 3000); }
+        else { clearInterval(timer); }
+      });
+      document.addEventListener('visibilitychange', () => { if (!document.hidden) refresh(); });
+      form.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        if (!input.value.trim()) return;
+        button.disabled = true;
+        try {
+          const response = await fetch('/api/chat', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({visitor_id:await visitor(), text:input.value}), signal:AbortSignal.timeout(10000)});
+          const data = await response.json();
+          if (!response.ok) throw new Error(data.detail || '發送失敗');
+          input.value = ''; await refresh(); list.scrollTop = list.scrollHeight;
+        } catch (error) { status.textContent = error.message || '發送失敗，請稍後再試'; }
+        finally { button.disabled = false; }
+      });
+    })();
+  </script>
+
 </body>
 
 <!-- Snackbar -->
@@ -1281,8 +1560,7 @@
     ) {
       document.getElementById("toggle-dark-mode").checked = false;
       document.documentElement.setAttribute("data-theme", "dark");
-      schemaEditor.updateOptions({ theme: "vs-dark" });
-      queryEditor.updateOptions({ theme: "vs-dark" });
+      monaco.editor.setTheme("vs-dark");
     }
   });
 
@@ -1301,8 +1579,7 @@
     .getElementById("toggle-dark-mode")
     .addEventListener("change", function (event) {
       const theme = event.target.checked ? "vs" : "vs-dark";
-      schemaEditor.updateOptions({ theme: theme });
-      queryEditor.updateOptions({ theme: theme });
+      monaco.editor.setTheme(theme);
       if (document.documentElement.getAttribute("data-theme") === "dark") {
         document.documentElement.removeAttribute("data-theme");
       } else {
