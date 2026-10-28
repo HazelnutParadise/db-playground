@@ -5,7 +5,7 @@ services:
       context: .
       dockerfile: Dockerfile
     environment:
-      CHAT_DB_PATH: /data/chat.sqlite3
+      CHAT_DB_PATH: /data/chat/chat.sqlite3
       OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://ollama:11434}
       LOGTO_APP_ID: ${LOGTO_APP_ID:-}
       LOGTO_APP_SECRET: ${LOGTO_APP_SECRET:-}
@@ -14,7 +14,7 @@ services:
     volumes:
       - type: bind
         source: ${CHAT_DATA_DIR:?必須設定 CHAT_DATA_DIR}
-        target: /data
+        target: /data/chat
         bind:
           create_host_path: false
     ports:
